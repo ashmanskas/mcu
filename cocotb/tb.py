@@ -19,17 +19,17 @@ class Tester:
         """write 'addr' := 'data' on register-file bus"""
         dut = self.dut
         if verbose is None: verbose = self.verbose
-        await self.wclk(rising=False)
+        await self.wclk()
         dut.baddr <= addr
         dut.bwrdata <= data
         dut.bwr <= 1
         dut.bstrobe <= 1
-        await self.wclk(rising=False)
+        await self.wclk()
         dut.baddr <= 0
         dut.bwrdata <= 0
         dut.bwr <= 0
         dut.bstrobe <= 0
-        await self.wclk(rising=False)
+        await self.wclk()
         if verbose:
             print("wr {:04x} := {:04x}".format(addr, data))
 
@@ -37,17 +37,17 @@ class Tester:
         """read from regsiter-file bus at address 'addr'"""
         dut = self.dut
         if verbose is None: verbose = self.verbose
-        await self.wclk(rising=False)
+        await self.wclk()
         dut.baddr <= addr
         dut.bwr <= 0
         dut.bstrobe <= 0
-        await self.wclk(rising=False)
+        await self.wclk()
         dut.bstrobe <= 1
-        await self.wclk(rising=False)
+        await self.wclk()
         data = dut.brddata.value.integer
         dut.bstrobe <= 0
         dut.baddr <= 0
-        await self.wclk(rising=False)
+        await self.wclk()
         if verbose:
             print("rd {:04x} -> {:04x}".format(addr, data))
         return data
@@ -100,11 +100,11 @@ class Tester:
         do_coinc_next_clk = False
         # Latency (in clock cycles) of rocstar <-> MCU round trip;
         # this will be much longer in real life
-        MCU_LATENCY = 6
+        MCU_LATENCY = 7
         # Begin main event loop
         while True:
             word = 0x00
-            await self.wclk(rising=False)
+            await self.wclk()
             # Monitor MCU output
             mout = mcu_out.value.integer
             if mout==MCU_NCOIN:
@@ -175,11 +175,11 @@ class Tester:
         ml = dut.ml
 
         # Wait a while, then reset, then wait a while
-        await self.wclk(20, rising=False)
+        await self.wclk(20)
         dut.ml.rst <= 1
-        await self.wclk(rising=False)
+        await self.wclk()
         dut.ml.rst <= 0
-        await self.wclk(10, rising=False)
+        await self.wclk(10)
 
         # Instantiate emulated rocstar boards
         self.throw_coinc = cocotb.fork(self.throw_coincidences())
@@ -200,6 +200,10 @@ class Tester:
         await self.wr(0x0001, 0x4321)
         d = await self.rd(0x0000); assert d==0x1234
         d = await self.rd(0x0001); assert d==0x4321
+        await self.wr(0x0001, 0x2341)
+        d = await self.rd(0x0001); assert d==0x2341
+        d = await self.rd(0x0000); assert d==0x1234
+        d = await self.rd(0x0001); assert d==0x2341
 
         await self.wclk(10)
         self.throw_coinc.kill()

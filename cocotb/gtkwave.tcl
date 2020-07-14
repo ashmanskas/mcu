@@ -1,28 +1,32 @@
 gtkwave::loadFile tb.lxt
 gtkwave::forceOpenTreeNode tb.ml
 set nfacs [gtkwave::getNumFacs]
+set fp [open signames.txt w]
 for {set i 0} {$i < $nfacs} {incr i} {
     set facname [gtkwave::getFacName $i]
     puts "$i : $facname"
+    puts $fp $facname
 }
+close $fp
 set siglist {
-    tb.ml.A1in 
-    tb.ml.A1out 
-    tb.ml.B1in 
-    tb.ml.B1out 
-    tb.ml.baddr 
-    tb.ml.brddata 
-    tb.ml.bwrdata 
-    tb.ml.bstrobe 
-    tb.ml.bwr 
     tb.ml.clk 
     tb.ml.rst 
+    tb.ml.A1in 
+    tb.ml.B1in 
+    tb.ml.A1out 
+    tb.ml.B1out 
     tb.ml.coinc.singleA 
     tb.ml.coinc.singleB 
     tb.ml.coinc.ncoincA 
     tb.ml.coinc.pcoincA 
     tb.ml.coinc.ncoincB 
     tb.ml.coinc.pcoincB 
+    tb.ml.baddr 
+    tb.ml.bwr 
+    tb.ml.bstrobe 
+    tb.ml.bwrdata 
+    tb.ml.brddata
+    tb.ml.r0001.q
 }
 gtkwave::addSignalsFromList $siglist
 gtkwave::presentWindow
