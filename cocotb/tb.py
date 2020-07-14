@@ -82,12 +82,14 @@ class Tester:
         # for "object") to avoid clutter below.
         o = SimpleNamespace()
         self.fr[whoami] = o
-        o.clk_counter = random.randint(0,255)
+        o.clk_counter = random.randint(0,65535)
         o.idle_counter = 0
         o.nclk_since_trigger = 0
         o.trigger_enabled = False  # Is rocstar in data-taking mode?
-        #
+        o.saved_clk_counter = 0
+        # Look up self.dut.clkcnt_A1 or similar
         tb_clkcnt = getattr(self.dut, "clkcnt_"+whoami)
+        tb_clksav = getattr(self.dut, "clksav_"+whoami)
         # I spread the clk_counter bits out like this because mcu_in bits
         # 7:4 are on one wire and bits 3:0 are on another wire.  I want to
         # use the idle patterns to check the signal integrity of both wires.
@@ -149,6 +151,8 @@ class Tester:
                     o.trigger_enabled = True
                 elif o.spword==self.SPWORD_END:
                     o.trigger_enabled = False
+                elif o.spword==self.SPWORD_SVCLK:
+                    o.saved_clk_counter = o.clk_counter
             else:
                 # We're in some ordinary state
                 if mout==MCU_SPECL:
@@ -220,6 +224,7 @@ class Tester:
             o.word_history.append(word)
             # Put clk_counter value into Verilog, where gtkwave can see it
             tb_clkcnt <= o.clk_counter
+            tb_clksav <= o.saved_clk_counter
             o.clk_counter += 1
                 
     async def run_test1(self):
@@ -248,12 +253,17 @@ class Tester:
         self.fr["B1"].forked_coroutine = _
 
         # Run for a while, then tell mcu to transmit special commands
-        # to rocstar boards to synchronize their clock counters and
-        # start data collection.
+        # to rocstar boards to save the current values of their clock
+        # counters, then synchronize their clock counters and start
+        # data collection.
+        await self.wclk(20)
+        await self.wr(0x0002, self.SPWORD_SVCLK, check=dut.ml.spword)
         await self.wclk(20)
         await self.wr(0x0002, self.SPWORD_SYNCH, check=dut.ml.spword)
         await self.wclk(10)
         await self.wr(0x0002, self.SPWORD_START, check=dut.ml.spword)
+        await self.wclk(20)
+        await self.wr(0x0002, self.SPWORD_SVCLK, check=dut.ml.spword)
 
         # Let everything run for a while, then tell mcu to transmit
         # the "stop data collection" special command to the rocstar
@@ -275,6 +285,8 @@ class Tester:
         d = await self.rd(0x0001, check=0x2341)
         d = await self.rd(0x0000, check=0x1234)
         d = await self.rd(0x0001, check=0x2341)
+        await self.wclk(20)
+        await self.wr(0x0002, self.SPWORD_SVCLK, check=dut.ml.spword)
         await self.wclk(20)
 
         # Now kill off the coroutines we forked earlier

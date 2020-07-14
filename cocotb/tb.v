@@ -46,14 +46,10 @@ module tb;
     // These variables eventually will be part of the rocstar board
     // firmware; they are here for now so that we can use python code
     // to emulate several rocstar boards' communication with the mcu.
-    reg [47:0] clkcnt_A1 = 0;
-    reg [47:0] clkcnt_A2 = 0;
-    reg [47:0] clkcnt_A3 = 0;
-    reg [47:0] clkcnt_A4 = 0;
-    reg [47:0] clkcnt_B1 = 0;
-    reg [47:0] clkcnt_B2 = 0;
-    reg [47:0] clkcnt_B3 = 0;
-    reg [47:0] clkcnt_B4 = 0;
+    reg [47:0] clkcnt_A1=0, clkcnt_A2=0, clkcnt_A3=0, clkcnt_A4=0;
+    reg [47:0] clkcnt_B1=0, clkcnt_B2=0, clkcnt_B3=0, clkcnt_B4=0;
+    reg [47:0] clksav_A1=0, clksav_A2=0, clksav_A3=0, clksav_A4=0;
+    reg [47:0] clksav_B1=0, clksav_B2=0, clksav_B3=0, clksav_B4=0;
 
 endmodule
 
