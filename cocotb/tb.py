@@ -3,10 +3,17 @@ import cocotb
 import random
 
 from collections import deque
+from types import SimpleNamespace
 
 
 class Tester:
 
+    # values for special words sent from MCU to rocstar boards
+    SPWORD_SYNCH = 0x1111  # synchronize clock counters to 0
+    SPWORD_START = 0x2222  # start data taking
+    SPWORD_END   = 0x3333  # end data taking
+    SPWORD_SVCLK = 0x4444  # save current clock counter to a register
+        
     def __init__(self, dut):
         self.dut = dut
         self.verbose = False
@@ -15,7 +22,7 @@ class Tester:
         """shortcut for await ClockCycles(self.dut.clk, ...)"""
         await cocotb.triggers.ClockCycles(self.dut.clk, nclk, rising=rising)
 
-    async def wr(self, addr, data, verbose=None):
+    async def wr(self, addr, data, check=None, verbose=None):
         """write 'addr' := 'data' on register-file bus"""
         dut = self.dut
         if verbose is None: verbose = self.verbose
@@ -32,8 +39,10 @@ class Tester:
         await self.wclk()
         if verbose:
             print("wr {:04x} := {:04x}".format(addr, data))
+        if check is not None:
+            assert check.value.integer == data
 
-    async def rd(self, addr, verbose=None):
+    async def rd(self, addr, check=None, verbose=None):
         """read from regsiter-file bus at address 'addr'"""
         dut = self.dut
         if verbose is None: verbose = self.verbose
@@ -50,6 +59,8 @@ class Tester:
         await self.wclk()
         if verbose:
             print("rd {:04x} -> {:04x}".format(addr, data))
+        if check is not None:
+            assert data == check
         return data
 
     async def throw_coincidences(self, coinc_probability=0.02):
@@ -65,9 +76,18 @@ class Tester:
     async def fake_rocstar(self, whoami, mcu_in, mcu_out,
                            single_probability=0.03):
         """emulate cable I/O of one rocstar board"""
-        clk_counter = 0
-        idle_counter = 0
-        nclk_since_trigger = 0
+        # Create a place to store this coroutine's internal state, so
+        # that it can be accessed from the enclosing 'Tester'
+        # instance.  I'll give it the absurdly short name 'o' (short
+        # for "object") to avoid clutter below.
+        o = SimpleNamespace()
+        self.fr[whoami] = o
+        o.clk_counter = random.randint(0,255)
+        o.idle_counter = 0
+        o.nclk_since_trigger = 0
+        o.trigger_enabled = False  # Is rocstar in data-taking mode?
+        #
+        tb_clkcnt = getattr(self.dut, "clkcnt_"+whoami)
         # I spread the clk_counter bits out like this because mcu_in bits
         # 7:4 are on one wire and bits 3:0 are on another wire.  I want to
         # use the idle patterns to check the signal integrity of both wires.
@@ -89,7 +109,7 @@ class Tester:
         MCU_TESTA = 0b1010 ; MCU_TESTF = 0b1111
         # Keep track of most recent N transmitted words
         NKEEP = 20
-        word_history = deque(iterable=NKEEP*[0], maxlen=NKEEP)
+        o.word_history = deque(iterable=NKEEP*[0], maxlen=NKEEP)
         # Enforce minimum delay between triggers from a given rocstar.
         # Do we do this in real life?!
         MIN_IDLE_BETWEEN_TRIG = 1
@@ -101,34 +121,62 @@ class Tester:
         # Latency (in clock cycles) of rocstar <-> MCU round trip;
         # this will be much longer in real life
         MCU_LATENCY = 7
+        # Keep track of what state the event loop is in
+        ST_IDLE = 0
+        ST_SPECL=1 ; ST_SPEC1=2 ; ST_SPEC2=3 ; ST_SPEC3=4
+        o.state = ST_IDLE
         # Begin main event loop
         while True:
             word = 0x00
-            await self.wclk()
+            await self.wclk()  # This loop executes once per clk cycle
             # Monitor MCU output
             mout = mcu_out.value.integer
-            if mout==MCU_NCOIN:
-                print("rs{} @ {} : NCOIN {} whist={}".
-                      format(whoami, clk_counter,
-                             word_history[-MCU_LATENCY], word_history))
-                # We should have issued a single trigger LATENCY ago
-                assert (word_history[-MCU_LATENCY] & 0x80) != 0
-            elif mout==MCU_PCOIN:
-                print("rs{} @ {} : PCOIN {} whist={}".
-                      format(whoami, clk_counter,
-                             word_history[-MCU_LATENCY], word_history))
-                # We should have issued a single trigger LATENCY ago
-                assert (word_history[-MCU_LATENCY] & 0x80) != 0
+            if o.state==ST_SPECL:
+                o.spword |= (mout << 12)
+                o.state = ST_SPEC1
+            elif o.state==ST_SPEC1:
+                o.spword |= (mout << 8)
+                o.state = ST_SPEC2
+            elif o.state==ST_SPEC2:
+                o.spword |= (mout << 4)
+                o.state = ST_SPEC3
+            elif o.state==ST_SPEC3:
+                o.spword |= mout
+                o.state = ST_IDLE
+                if o.spword==self.SPWORD_SYNCH:
+                    o.clk_counter = 0
+                elif o.spword==self.SPWORD_START:
+                    o.trigger_enabled = True
+                elif o.spword==self.SPWORD_END:
+                    o.trigger_enabled = False
             else:
-                # We should NOT have issued a single trigger LATENCY ago
-                if (word_history[-MCU_LATENCY] & 0x80) != 0:
-                    print("rs{} @ {} : uhoh {} whist={}".
-                          format(whoami, clk_counter,
-                                 word_history[-MCU_LATENCY], word_history))
-                assert (word_history[-MCU_LATENCY] & 0x80) == 0
+                # We're in some ordinary state
+                if mout==MCU_SPECL:
+                    o.spword = 0x0000
+                    o.state = ST_SPECL
+                elif mout==MCU_NCOIN:
+                    print("rs{} @ {} : NCOIN {} whist={}".
+                          format(whoami, o.clk_counter,
+                                 o.word_history[-MCU_LATENCY], o.word_history))
+                    # We should have issued a single trigger LATENCY ago
+                    assert (o.word_history[-MCU_LATENCY] & 0x80) != 0
+                elif mout==MCU_PCOIN:
+                    print("rs{} @ {} : PCOIN {} whist={}".
+                          format(whoami, o.clk_counter,
+                                 o.word_history[-MCU_LATENCY], o.word_history))
+                    # We should have issued a single trigger LATENCY ago
+                    assert (o.word_history[-MCU_LATENCY] & 0x80) != 0
+                else:
+                    # We should NOT have issued a single trigger LATENCY ago
+                    if (o.word_history[-MCU_LATENCY] & 0x80) != 0:
+                        print("rs{} @ {} : uhoh {} whist={}".
+                              format(whoami, o.clk_counter,
+                                     o.word_history[-MCU_LATENCY],
+                                     o.word_history))
+                    assert (o.word_history[-MCU_LATENCY] & 0x80) == 0
             # Next 3 lines are to make the if statement more readable
             do_single = random.random() < single_probability
-            min_idle_ok = nclk_since_trigger > MIN_IDLE_BETWEEN_TRIG
+            min_idle_ok = o.nclk_since_trigger > MIN_IDLE_BETWEEN_TRIG
             if do_coinc_next_clk:
                 # We have a pending delayed coincidence from previous clk
                 do_coinc = True
@@ -145,26 +193,34 @@ class Tester:
                 # We have a new coinc this clk and we'll do it now
                 do_coinc = True
                 do_coinc_next_clk = False
+            if not o.trigger_enabled:
+                # If we're not in data-taking mode, then we should not
+                # report triggers to the mcu
+                do_single = False
+                do_coinc = False
+                do_coinc_next_clk = False
             if (min_idle_ok and (do_single or do_coinc)):
                 # Issue a single-photon trigger
                 time_offset = random.randint(0,127)
                 time_offset = 0  # easier to debug!
                 time_offset &= 0x7f  # this should do nothing
                 word = TRIG | time_offset
-                nclk_since_trigger = 0
+                o.nclk_since_trigger = 0
             else:
                 # Issue an IDLE word
-                word = idle[idle_counter]
-                clk_bits = clk_counter >> (4*idle_counter) & 0xf
+                word = idle[o.idle_counter]
+                clk_bits = o.clk_counter >> (4*o.idle_counter) & 0xf
                 clk_hibits = (clk_bits >> 2) & 3
                 clk_lobits = clk_bits & 3
                 word |= clk_lobits
                 word |= clk_hibits << 4
-                idle_counter = (idle_counter + 1) % NIDLE
-                nclk_since_trigger += 1
+                o.idle_counter = (o.idle_counter + 1) % NIDLE
+                o.nclk_since_trigger += 1
             mcu_in <= word
-            word_history.append(word)
-            clk_counter += 1
+            o.word_history.append(word)
+            # Put clk_counter value into Verilog, where gtkwave can see it
+            tb_clkcnt <= o.clk_counter
+            o.clk_counter += 1
                 
     async def run_test1(self):
         """initial very simple test of mcu_logic module"""
@@ -183,32 +239,51 @@ class Tester:
 
         # Instantiate emulated rocstar boards
         self.throw_coinc = cocotb.fork(self.throw_coincidences())
-        self.frA1 = cocotb.fork(
+        self.fr = {}  # dict of info about fake_rocstar instances
+        _ = cocotb.fork(
             self.fake_rocstar("A1", mcu_in=dut.A1in, mcu_out=dut.A1out))
-        self.frB1 = cocotb.fork(
+        self.fr["A1"].forked_coroutine = _
+        _ = cocotb.fork(
             self.fake_rocstar("B1", mcu_in=dut.B1in, mcu_out=dut.B1out))
+        self.fr["B1"].forked_coroutine = _
 
-        # Let everything run for a while
+        # Run for a while, then tell mcu to transmit special commands
+        # to rocstar boards to synchronize their clock counters and
+        # start data collection.
+        await self.wclk(20)
+        await self.wr(0x0002, self.SPWORD_SYNCH, check=dut.ml.spword)
+        await self.wclk(10)
+        await self.wr(0x0002, self.SPWORD_START, check=dut.ml.spword)
+
+        # Let everything run for a while, then tell mcu to transmit
+        # the "stop data collection" special command to the rocstar
+        # boards.
         await self.wclk(300)
+        await self.wr(0x0002, self.SPWORD_END, check=dut.ml.spword)
+        await self.wclk(10)
 
         # Try some register-file "bus" I/O
         self.verbose = True
-        await self.wr(0x0001, 0x0000)
-        d = await self.rd(0x0000); assert d==0x1234
-        d = await self.rd(0x0001); assert d==0x0000
-        d = await self.rd(0x0000); assert d==0x1234
-        await self.wr(0x0001, 0x4321)
-        d = await self.rd(0x0000); assert d==0x1234
-        d = await self.rd(0x0001); assert d==0x4321
-        await self.wr(0x0001, 0x2341)
-        d = await self.rd(0x0001); assert d==0x2341
-        d = await self.rd(0x0000); assert d==0x1234
-        d = await self.rd(0x0001); assert d==0x2341
+        await self.wr(0x0001, 0x0000, check=dut.ml.q0001)
+        d = await self.rd(0x0000, check=0x1234)
+        d = await self.rd(0x0001, check=0x0000)
+        d = await self.rd(0x0000, check=0x1234)
+        await self.wr(0x0001, 0x4321, check=dut.ml.q0001)
+        d = await self.rd(0x0000, check=0x1234)
+        d = await self.rd(0x0001, check=0x4321)
+        await self.wr(0x0001, 0x2341, check=dut.ml.q0001)
+        d = await self.rd(0x0001, check=0x2341)
+        d = await self.rd(0x0000, check=0x1234)
+        d = await self.rd(0x0001, check=0x2341)
+        await self.wclk(20)
 
-        await self.wclk(10)
+        # Now kill off the coroutines we forked earlier
         self.throw_coinc.kill()
-        self.frA1.kill()
-        self.frB1.kill()
+        for fr_name in self.fr:
+            fr = self.fr[fr_name]
+            print("killing off fake_rocstar instance {} : {}".
+                  format(fr_name, fr))
+            fr.forked_coroutine.kill()
         await self.wclk(5)
 
 

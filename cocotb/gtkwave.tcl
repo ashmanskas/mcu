@@ -27,6 +27,16 @@ set siglist {
     tb.ml.bwrdata 
     tb.ml.brddata
     tb.ml.r0001.q
+    tb.ml.spword
+    tb.ml.do_spword
+    tb.clkcnt_A1[7:0]
+    tb.clkcnt_A2[7:0]
+    #tb.clkcnt_A3[7:0]
+    #tb.clkcnt_A4[7:0]
+    tb.clkcnt_B1[7:0]
+    tb.clkcnt_B2[7:0]
+    #tb.clkcnt_B3[7:0]
+    #tb.clkcnt_B4[7:0]
 }
 gtkwave::addSignalsFromList $siglist
 gtkwave::presentWindow

@@ -33,6 +33,13 @@ module mcu_logic
     bror #(16'h0000) r0000(ibus, obus, 16'h1234);  // read-only register
     wire [15:0] q0001;
     breg #(16'h0001) r0001(ibus, obus, q0001);  // dummy read/write register
+    wire [15:0] spword;
+    breg #(16'h0002) r0002(ibus, obus, spword);
+    reg do_spword = 0;
+    always @ (posedge clk) begin
+        // Pulse 'do_spword' for one clk cycle upon write to 'spword'
+        do_spword <= (baddr == 16'h0002 && bwr && bstrobe);
+    end
     // We'll create some sort of reset logic later
     reg rst = 0;
     // Signals needed for coincidence-forming
@@ -48,20 +55,28 @@ module mcu_logic
     // Instantiate a module to process each of the 8 cables;
     // this is highly oversimplified for now
     cable A1 (.clk(clk), .rst(rst), .in(A1in), .out(A1out),
+              .spword(spword), .do_spw(do_spword),
               .single(sA1), .pcoinc(pcA1), .ncoinc(ncA1));
     cable A2 (.clk(clk), .rst(rst), .in(A2in), .out(A2out),
+              .spword(spword), .do_spw(do_spword),
               .single(sA2), .pcoinc(pcA2), .ncoinc(ncA2));
     cable A3 (.clk(clk), .rst(rst), .in(A3in), .out(A3out),
+              .spword(spword), .do_spw(do_spword),
               .single(sA3), .pcoinc(pcA3), .ncoinc(ncA3));
     cable A4 (.clk(clk), .rst(rst), .in(A4in), .out(A4out),
+              .spword(spword), .do_spw(do_spword),
               .single(sA4), .pcoinc(pcA4), .ncoinc(ncA4));
     cable B1 (.clk(clk), .rst(rst), .in(B1in), .out(B1out),
+              .spword(spword), .do_spw(do_spword),
               .single(sB1), .pcoinc(pcB1), .ncoinc(ncB1));
     cable B2 (.clk(clk), .rst(rst), .in(B2in), .out(B2out),
+              .spword(spword), .do_spw(do_spword),
               .single(sB2), .pcoinc(pcB2), .ncoinc(ncB2));
     cable B3 (.clk(clk), .rst(rst), .in(B3in), .out(B3out),
+              .spword(spword), .do_spw(do_spword),
               .single(sB3), .pcoinc(pcB3), .ncoinc(ncB3));
     cable B4 (.clk(clk), .rst(rst), .in(B4in), .out(B4out),
+              .spword(spword), .do_spw(do_spword),
               .single(sB4), .pcoinc(pcB4), .ncoinc(ncB4));
 endmodule  // mcu_logic
 
@@ -137,13 +152,15 @@ endmodule
  */
 module cable
   (
-   input  wire       clk,     // 100 MHz clock
-   input  wire       rst,     // synchronous reset
-   input  wire [7:0] in,      // 8-bit input data (from ROCSTAR)
-   output reg  [3:0] out,     // 4-bit output data (to ROCSTAR)
-   output reg        single,  // single photon detected for this cable
-   input  wire       pcoinc,  // prompt coincidence confirmed for this cable
-   input  wire       ncoinc   // no coincidence found for this cable
+   input  wire        clk,     // 100 MHz clock
+   input  wire        rst,     // synchronous reset
+   input  wire [7:0]  in,      // 8-bit input data (from ROCSTAR)
+   output reg  [3:0]  out,     // 4-bit output data (to ROCSTAR)
+   input  wire [15:0] spword,  // "special" command word to transmit
+   input  wire        do_spw,  // pulse: emit a special word now
+   output reg         single,  // single photon detected for this cable
+   input  wire        pcoinc,  // prompt coincidence confirmed for this cable
+   input  wire        ncoinc   // no coincidence found for this cable
    );
     // Initialize registered outputs to avoid 'X' values in simulation at t=0
     initial begin
@@ -170,13 +187,14 @@ module cable
     localparam O_IDLE3 = 4'b1110;
     localparam O_NCOIN = 4'b1001;
     localparam O_PCOIN = 4'b0011;
+    localparam O_SPECL = 4'b1100;
     // Mnemonic names for Finite State Machine states
     localparam 
-      START = 0, IDLE1 = 1, IDLE2 = 2, IDLE3 = 3, 
-      NCOIN = 4, PCOIN = 5;
-    reg [2:0] fsm = START;  // flip-flop
-    reg [2:0] fsm_prev = START;  // flip-flop: keep track of previous state
-    reg [2:0] fsm_d = START;  // combinational logic
+      START=0, IDLE1=1, IDLE2=2, IDLE3=3, NCOIN=4, PCOIN=5, SPECL=6, SPEC1=7,
+      SPEC2=8, SPEC3=9, SPEC4=10;
+    reg [3:0] fsm = START;  // flip-flop
+    reg [3:0] fsm_prev = START;  // flip-flop: keep track of previous state
+    reg [3:0] fsm_d = START;  // combinational logic
     reg [3:0] out_d;  // combinational logic
     reg [31:0] ticks = 0;  // useful to display time in units of 'clk'
     always @ (posedge clk) begin
@@ -208,6 +226,7 @@ module cable
                   fsm_d = IDLE1;
                   if (ncoinc) fsm_d = NCOIN;
                   if (pcoinc) fsm_d = PCOIN;
+                  if (do_spw) fsm_d = SPECL;
               end
             IDLE1:
               begin
@@ -215,6 +234,7 @@ module cable
                   fsm_d = IDLE2;
                   if (ncoinc) fsm_d = NCOIN;
                   if (pcoinc) fsm_d = PCOIN;
+                  if (do_spw) fsm_d = SPECL;
               end
             IDLE2:
               begin
@@ -222,6 +242,7 @@ module cable
                   fsm_d = IDLE3;
                   if (ncoinc) fsm_d = NCOIN;
                   if (pcoinc) fsm_d = PCOIN;
+                  if (do_spw) fsm_d = SPECL;
               end
             IDLE3:
               begin
@@ -229,16 +250,47 @@ module cable
                   fsm_d = START;
                   if (ncoinc) fsm_d = NCOIN;
                   if (pcoinc) fsm_d = PCOIN;
+                  if (do_spw) fsm_d = SPECL;
               end
             NCOIN:
               begin
                   out_d = O_NCOIN;
                   fsm_d = START;
+                  if (do_spw) fsm_d = SPECL;
               end
             PCOIN:
               begin
                   out_d = O_PCOIN;
                   fsm_d = START;
+                  if (do_spw) fsm_d = SPECL;
+              end
+            SPECL:
+              begin
+                  out_d = O_SPECL;
+                  fsm_d = SPEC1;
+              end
+            SPEC1:
+              begin
+                  out_d = spword[15:12];
+                  fsm_d = SPEC2;
+              end
+            SPEC2:
+              begin
+                  out_d = spword[11:8];
+                  fsm_d = SPEC3;
+              end
+            SPEC3:
+              begin
+                  out_d = spword[7:4];
+                  fsm_d = SPEC4;
+              end
+            SPEC4:
+              begin
+                  out_d = spword[3:0];
+                  fsm_d = START;
+                  if (ncoinc) fsm_d = NCOIN;
+                  if (pcoinc) fsm_d = PCOIN;
+                  if (do_spw) fsm_d = SPECL;
               end
             default:
               begin
