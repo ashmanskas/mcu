@@ -1,5 +1,7 @@
 
 import cocotb
+import inspect
+import os
 import random
 
 from collections import deque
@@ -17,7 +19,29 @@ class Tester:
     def __init__(self, dut):
         self.dut = dut
         self.verbose = False
+        self.nchecks_ok = 0
+        self.nchecks_failed = 0
 
+    def check(self, expr):
+        if expr:
+            self.nchecks_ok += 1
+            return
+        self.nchecks_failed += 1
+        callerframerecord = inspect.stack()[1]
+        frame = callerframerecord[0]
+        info = inspect.getframeinfo(frame)
+        where = "{}:{}:{} :: {}".format(
+            info.function, os.path.basename(info.filename),
+            info.lineno, info.code_context[0].strip())
+        # https://stackoverflow.com/questions/6810999/
+        #   how-to-determine-file-function-and-line-number
+        ns = self.ns()
+        print("CHECKFAIL@{:.0f}:".format(ns), where)
+
+    def ns(self):
+        """return current simulation time in nanoseconds"""
+        return cocotb.utils.get_sim_time(units="ns")
+        
     async def wclk(self, nclk=1, rising=True):
         """shortcut for await ClockCycles(self.dut.clk, ...)"""
         await cocotb.triggers.ClockCycles(self.dut.clk, nclk, rising=rising)
@@ -40,7 +64,7 @@ class Tester:
         if verbose:
             print("wr {:04x} := {:04x}".format(addr, data))
         if check is not None:
-            assert check.value.integer == data
+            self.check(check.value.integer == data)
 
     async def rd(self, addr, check=None, verbose=None):
         """read from regsiter-file bus at address 'addr'"""
@@ -60,7 +84,7 @@ class Tester:
         if verbose:
             print("rd {:04x} -> {:04x}".format(addr, data))
         if check is not None:
-            assert data == check
+            self.check(data == check)
         return data
 
     async def throw_coincidences(self, coinc_probability=0.02):
@@ -82,15 +106,13 @@ class Tester:
         # for "object") to avoid clutter below.
         o = SimpleNamespace()
         self.fr[whoami] = o
-        o.clk_counter = random.randint(0,65535)
-        o.idle_counter = 0
         o.nclk_since_trigger = 0
-        o.trigger_enabled = False  # Is rocstar in data-taking mode?
-        o.saved_clk_counter = 0
         # Look up self.dut.clkcnt_A1 or similar
         tb_clkcnt = getattr(self.dut, "clkcnt_"+whoami)
+        tb_clkcnt <= random.randint(0,65535)
         tb_clksav = getattr(self.dut, "clksav_"+whoami)
         single_net = getattr(self.dut, "single_"+whoami)
+        runmode_net = getattr(self.dut, "runmode_"+whoami)
         # I spread the clk_counter bits out like this because mcu_in bits
         # 7:4 are on one wire and bits 3:0 are on another wire.  I want to
         # use the idle patterns to check the signal integrity of both wires.
@@ -112,7 +134,7 @@ class Tester:
         MCU_TESTA = 0b1010 ; MCU_TESTF = 0b1111
         # Keep track of most recent N transmitted words
         NKEEP = 20
-        o.word_history = deque(iterable=NKEEP*[0], maxlen=NKEEP)
+        o.trig_history = deque(iterable=NKEEP*[0], maxlen=NKEEP)
         # Enforce minimum delay between triggers from a given rocstar.
         # Do we do this in real life?!
         MIN_IDLE_BETWEEN_TRIG = 1
@@ -123,62 +145,39 @@ class Tester:
         do_coinc_next_clk = False
         # Latency (in clock cycles) of rocstar <-> MCU round trip;
         # this will be much longer in real life
-        MCU_LATENCY = 7
+        MCU_LATENCY = 9
         # Keep track of what state the event loop is in
-        ST_IDLE = 0
-        ST_SPECL=1 ; ST_SPEC1=2 ; ST_SPEC2=3 ; ST_SPEC3=4
-        o.state = ST_IDLE
+        ticks_since_specl = 0
         # Begin main event loop
         while True:
-            word = 0x00
+            do_trigger_now = 0
             await self.wclk()  # This loop executes once per clk cycle
             # Monitor MCU output
             mout = mcu_out.value.integer
-            if o.state==ST_SPECL:
-                o.spword |= (mout << 12)
-                o.state = ST_SPEC1
-            elif o.state==ST_SPEC1:
-                o.spword |= (mout << 8)
-                o.state = ST_SPEC2
-            elif o.state==ST_SPEC2:
-                o.spword |= (mout << 4)
-                o.state = ST_SPEC3
-            elif o.state==ST_SPEC3:
-                o.spword |= mout
-                o.state = ST_IDLE
-                if o.spword==self.SPWORD_SYNCH:
-                    o.clk_counter = 0
-                elif o.spword==self.SPWORD_START:
-                    o.trigger_enabled = True
-                elif o.spword==self.SPWORD_END:
-                    o.trigger_enabled = False
-                elif o.spword==self.SPWORD_SVCLK:
-                    o.saved_clk_counter = o.clk_counter
+            if ticks_since_specl>0 and ticks_since_specl<5:
+                ticks_since_specl += 1
+            elif mout==MCU_SPECL:
+                ticks_since_specl = 1
+            elif mout==MCU_NCOIN:
+                print("rs{}@{:.0f} : NCOIN {} whist={}".
+                      format(whoami, self.ns(),
+                             o.trig_history[-MCU_LATENCY], o.trig_history))
+                # We should have issued a single trigger LATENCY ago
+                self.check(o.trig_history[-MCU_LATENCY])
+            elif mout==MCU_PCOIN:
+                print("rs{}@{:.0f} : PCOIN {} whist={}".
+                      format(whoami, self.ns(),
+                             o.trig_history[-MCU_LATENCY], o.trig_history))
+                # We should have issued a single trigger LATENCY ago
+                self.check(o.trig_history[-MCU_LATENCY])
             else:
-                # We're in some ordinary state
-                if mout==MCU_SPECL:
-                    o.spword = 0x0000
-                    o.state = ST_SPECL
-                elif mout==MCU_NCOIN:
-                    print("rs{} @ {} : NCOIN {} whist={}".
-                          format(whoami, o.clk_counter,
-                                 o.word_history[-MCU_LATENCY], o.word_history))
-                    # We should have issued a single trigger LATENCY ago
-                    assert (o.word_history[-MCU_LATENCY] & 0x80) != 0
-                elif mout==MCU_PCOIN:
-                    print("rs{} @ {} : PCOIN {} whist={}".
-                          format(whoami, o.clk_counter,
-                                 o.word_history[-MCU_LATENCY], o.word_history))
-                    # We should have issued a single trigger LATENCY ago
-                    assert (o.word_history[-MCU_LATENCY] & 0x80) != 0
-                else:
-                    # We should NOT have issued a single trigger LATENCY ago
-                    if (o.word_history[-MCU_LATENCY] & 0x80) != 0:
-                        print("rs{} @ {} : uhoh {} whist={}".
-                              format(whoami, o.clk_counter,
-                                     o.word_history[-MCU_LATENCY],
-                                     o.word_history))
-                    assert (o.word_history[-MCU_LATENCY] & 0x80) == 0
+                # We should NOT have issued a single trigger LATENCY ago
+                if o.trig_history[-MCU_LATENCY]:
+                    print("rs{}@{:.0f} : uhoh {} whist={}".
+                          format(whoami, self.ns(),
+                                 o.trig_history[-MCU_LATENCY],
+                                 o.trig_history))
+                self.check(not o.trig_history[-MCU_LATENCY])
             # Next 3 lines are to make the if statement more readable
             do_single = random.random() < single_probability
             min_idle_ok = o.nclk_since_trigger >= MIN_IDLE_BETWEEN_TRIG
@@ -198,7 +197,7 @@ class Tester:
                 # We have a new coinc this clk and we'll do it now
                 do_coinc = True
                 do_coinc_next_clk = False
-            if not o.trigger_enabled:
+            if runmode_net.value.integer==0:
                 # If we're not in data-taking mode, then we should not
                 # report triggers to the mcu
                 do_single = False
@@ -209,25 +208,13 @@ class Tester:
                 time_offset = random.randint(0,127)
                 time_offset = 0  # easier to debug!
                 time_offset &= 0x7f  # this should do nothing
-                word = TRIG | time_offset
+                do_trigger_now = 1
                 o.nclk_since_trigger = 0
             else:
                 # Issue an IDLE word
-                word = idle[o.idle_counter]
-                clk_bits = o.clk_counter >> (4*o.idle_counter) & 0xf
-                clk_hibits = (clk_bits >> 2) & 3
-                clk_lobits = clk_bits & 3
-                word |= clk_lobits
-                word |= clk_hibits << 4
-                o.idle_counter = (o.idle_counter + 1) % NIDLE
                 o.nclk_since_trigger += 1
-            mcu_in <= word
-            o.word_history.append(word)
-            single_net <= ((o.word_history[-2] & 0x80) != 0)
-            # Put clk_counter value into Verilog, where gtkwave can see it
-            tb_clkcnt <= o.clk_counter
-            tb_clksav <= o.saved_clk_counter
-            o.clk_counter += 1
+            o.trig_history.append(do_trigger_now)
+            single_net <= do_trigger_now
                 
     async def run_test1(self):
         """initial very simple test of mcu_logic module"""
@@ -299,6 +286,12 @@ class Tester:
                   format(fr_name, fr))
             fr.forked_coroutine.kill()
         await self.wclk(5)
+
+        print("checks: {} ok, {} failed".format(
+            self.nchecks_ok, self.nchecks_failed))
+        if self.nchecks_failed:
+            raise cocotb.result.TestFailure(
+                "failed {} checks".format(self.nchecks_failed))
 
 
 @cocotb.test()

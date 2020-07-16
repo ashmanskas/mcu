@@ -11,42 +11,42 @@ close $fp
 set siglist {
     tb.ml.clk 
     tb.ml.rst 
-    tb.rmA1.to_mcu
-    tb.rmB1.to_mcu
+    #tb.rmA1.to_mcu
+    #tb.rmB1.to_mcu
     tb.ml.A1in
     tb.ml.B1in 
     tb.ml.A1out 
     tb.ml.B1out 
     tb.ml.coinc.singleA
-    tb.rmA1.single
-    tb.rmB1.single
+    #tb.rmA1.single
+    #tb.rmB1.single
     tb.ml.coinc.singleB 
     tb.ml.coinc.ncoincA 
     tb.ml.coinc.pcoincA
-    tp.rmA1.ncoinc
-    tp.rmA1.pcoinc
-    tp.rmA1.dcoinc
+    #tp.rmA1.ncoinc
+    #tp.rmA1.pcoinc
+    #tp.rmA1.dcoinc
     tb.ml.coinc.ncoincB 
     tb.ml.coinc.pcoincB 
-    tp.rmB1.ncoinc
-    tp.rmB1.pcoinc
-    tp.rmB1.dcoinc
+    #tp.rmB1.ncoinc
+    #tp.rmB1.pcoinc
+    #tp.rmB1.dcoinc
     tb.ml.baddr 
     tb.ml.bwr 
     tb.ml.bstrobe 
     tb.ml.bwrdata 
     tb.ml.brddata
     tb.ml.r0001.q
-    tb.ml.spword
+    #tb.ml.spword
     tb.rmA1.spword
-    tb.rmB1.spword
+    #tb.rmB1.spword
     tb.ml.do_spword
     tb.rmA1.sync_clk
     tb.rmA1.save_clk
     tb.rmA1.runmode
-    tb.rmB1.sync_clk
-    tb.rmB1.save_clk
-    tb.rmB1.runmode
+    #tb.rmB1.sync_clk
+    #tb.rmB1.save_clk
+    #tb.rmB1.runmode
     tb.clkcnt_A1[7:0]
     tb.clkcnt_B1[7:0]
     tb.clksav_A1[15:0]

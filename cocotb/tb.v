@@ -12,8 +12,9 @@ module tb;
     reg  [15:0] baddr=0, bwrdata=0;
     wire [15:0] brddata;
     reg         bwr=0, bstrobe=0;
-    reg  [7:0]  A1in=0, A2in=0, A3in=0, A4in=0;
-    reg  [7:0]  B1in=0, B2in=0, B3in=0, B4in=0;
+    wire [7:0]  A1in, B1in;
+    reg  [7:0]  A2in=0, A3in=0, A4in=0;
+    reg  [7:0]  B2in=0, B3in=0, B4in=0;
     wire [3:0]  A1out, A2out, A3out, A4out;
     wire [3:0]  B1out, B2out, B3out, B4out;
     mcu_logic ml
@@ -35,7 +36,6 @@ module tb;
     // Instantiate just one instance (corresponding to just one
     // rocstar board for now) of 'rocstar_mcu_link' logic that we will
     // soon embed into the rocstar board's firmware.
-    wire [7:0] A1in2, B1in2;  // This will go away soon
     reg single_A1 = 0, single_A2 = 0, single_A3 = 0, single_A4 = 0;
     reg single_B1 = 0, single_B2 = 0, single_B3 = 0, single_B4 = 0;
     wire [15:0] spword_A1, spword_B1;
@@ -45,17 +45,33 @@ module tb;
     wire pcoinc_B1, dcoinc_B1, ncoinc_B1;
     wire rst = ml.rst;  // We can do this in test bench code!
     rocstar_mcu_link rmA1
-      (.clk(clk), .rst(rst), .from_mcu(A1out), .to_mcu(A1in2),
+      (.clk(clk), .rst(rst), .from_mcu(A1out), .to_mcu(A1in),
        .clk_ctr(clkcnt_A1[15:0]),
        .single(single_A1), .spword(spword_A1), .runmode(runmode_A1),
        .sync_clk(sync_clk_A1), .save_clk(save_clk_A1),
        .pcoinc(pcoinc_A1), .dcoinc(dcoinc_A1), .ncoinc(ncoinc_A1));
     rocstar_mcu_link rmB1
-      (.clk(clk), .rst(rst), .from_mcu(B1out), .to_mcu(B1in2),
+      (.clk(clk), .rst(rst), .from_mcu(B1out), .to_mcu(B1in),
        .clk_ctr(clkcnt_B1[15:0]),
        .single(single_B1), .spword(spword_B1), .runmode(runmode_B1),
        .sync_clk(sync_clk_B1), .save_clk(save_clk_B1),
        .pcoinc(pcoinc_B1), .dcoinc(dcoinc_B1), .ncoinc(ncoinc_B1));
+    always @ (posedge clk) begin
+        // This stuff will be in the rocstar firmware, but not inside
+        // rocstar_mcu_link.
+        if (sync_clk_A1) begin
+            clkcnt_A1 <= 0;
+        end else begin
+            clkcnt_A1 <= clkcnt_A1 + 1;
+        end
+        if (sync_clk_B1) begin
+            clkcnt_B1 <= 0;
+        end else begin
+            clkcnt_B1 <= clkcnt_B1 + 1;
+        end
+        if (save_clk_A1) clksav_A1 <= clkcnt_A1;
+        if (save_clk_B1) clksav_B1 <= clkcnt_B1;
+    end
 
     // Create a 100 MHz clock on the 'clk' net, since I've always
     // suspected (but never actually verified) that it was faster to
