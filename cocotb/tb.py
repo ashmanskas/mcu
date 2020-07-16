@@ -90,6 +90,7 @@ class Tester:
         # Look up self.dut.clkcnt_A1 or similar
         tb_clkcnt = getattr(self.dut, "clkcnt_"+whoami)
         tb_clksav = getattr(self.dut, "clksav_"+whoami)
+        single_net = getattr(self.dut, "single_"+whoami)
         # I spread the clk_counter bits out like this because mcu_in bits
         # 7:4 are on one wire and bits 3:0 are on another wire.  I want to
         # use the idle patterns to check the signal integrity of both wires.
@@ -180,7 +181,7 @@ class Tester:
                     assert (o.word_history[-MCU_LATENCY] & 0x80) == 0
             # Next 3 lines are to make the if statement more readable
             do_single = random.random() < single_probability
-            min_idle_ok = o.nclk_since_trigger > MIN_IDLE_BETWEEN_TRIG
+            min_idle_ok = o.nclk_since_trigger >= MIN_IDLE_BETWEEN_TRIG
             if do_coinc_next_clk:
                 # We have a pending delayed coincidence from previous clk
                 do_coinc = True
@@ -222,6 +223,7 @@ class Tester:
                 o.nclk_since_trigger += 1
             mcu_in <= word
             o.word_history.append(word)
+            single_net <= ((o.word_history[-2] & 0x80) != 0)
             # Put clk_counter value into Verilog, where gtkwave can see it
             tb_clkcnt <= o.clk_counter
             tb_clksav <= o.saved_clk_counter

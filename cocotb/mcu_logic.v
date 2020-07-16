@@ -180,14 +180,15 @@ module cable
         // like +/- a few ns).
         single <= in[7];
     end
-    // Mnemonic names for output values written to cable
-    localparam O_IDLE0 = 4'b0111;
-    localparam O_IDLE1 = 4'b1011;
-    localparam O_IDLE2 = 4'b1101;
-    localparam O_IDLE3 = 4'b1110;
-    localparam O_NCOIN = 4'b1001;
-    localparam O_PCOIN = 4'b0011;
-    localparam O_SPECL = 4'b1100;
+    // Mnemonic names for values written to cable (move to include file)
+    localparam K_IDLE0 = 4'b0111;  // cycle through 4 IDLE words
+    localparam K_IDLE1 = 4'b1011;
+    localparam K_IDLE2 = 4'b1101;
+    localparam K_IDLE3 = 4'b1110;
+    localparam K_NCOIN = 4'b1001;  // no coincidence
+    localparam K_PCOIN = 4'b0011;  // prompt coincidence
+    localparam K_DCOIN = 4'b0110;  // delayed coincidence
+    localparam K_SPECL = 4'b1100;  // begin "special word" sequence
     // Mnemonic names for Finite State Machine states
     localparam 
       START=0, IDLE1=1, IDLE2=2, IDLE3=3, NCOIN=4, PCOIN=5, SPECL=6, SPEC1=7,
@@ -222,7 +223,7 @@ module cable
         case (fsm)
             START:
               begin
-                  out_d = O_IDLE0;
+                  out_d = K_IDLE0;
                   fsm_d = IDLE1;
                   if (ncoinc) fsm_d = NCOIN;
                   if (pcoinc) fsm_d = PCOIN;
@@ -230,7 +231,7 @@ module cable
               end
             IDLE1:
               begin
-                  out_d = O_IDLE1;
+                  out_d = K_IDLE1;
                   fsm_d = IDLE2;
                   if (ncoinc) fsm_d = NCOIN;
                   if (pcoinc) fsm_d = PCOIN;
@@ -238,7 +239,7 @@ module cable
               end
             IDLE2:
               begin
-                  out_d = O_IDLE2;
+                  out_d = K_IDLE2;
                   fsm_d = IDLE3;
                   if (ncoinc) fsm_d = NCOIN;
                   if (pcoinc) fsm_d = PCOIN;
@@ -246,7 +247,7 @@ module cable
               end
             IDLE3:
               begin
-                  out_d = O_IDLE3;
+                  out_d = K_IDLE3;
                   fsm_d = START;
                   if (ncoinc) fsm_d = NCOIN;
                   if (pcoinc) fsm_d = PCOIN;
@@ -254,19 +255,19 @@ module cable
               end
             NCOIN:
               begin
-                  out_d = O_NCOIN;
+                  out_d = K_NCOIN;
                   fsm_d = START;
                   if (do_spw) fsm_d = SPECL;
               end
             PCOIN:
               begin
-                  out_d = O_PCOIN;
+                  out_d = K_PCOIN;
                   fsm_d = START;
                   if (do_spw) fsm_d = SPECL;
               end
             SPECL:
               begin
-                  out_d = O_SPECL;
+                  out_d = K_SPECL;
                   fsm_d = SPEC1;
               end
             SPEC1:
