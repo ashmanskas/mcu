@@ -17,7 +17,12 @@ module rocstar_mcu_link
    input  wire        rst,       // synchronous reset
    input  wire [3:0]  from_mcu,  // 4-bit datain (from MCU to ROCSTAR)
    output reg  [7:0]  to_mcu,    // 8-bit dataout (from ROCSTAR to MCU)
-   input  wire [15:0] clk_ctr,   // low 16 bits of clock counter
+   input  wire [7:0]  testpatt,  // fixed 8-bit dataout for testing
+   input  wire        do_testp,  // enable fixed 'testpatt' dataout
+   output reg  [15:0] badidle,   // count out-of-sequence IDLE words from MCU
+   output reg  [15:0] numsingl,  // count # single triggers we sent to MCU
+   output reg  [15:0] numcoinc,  // count # *coinc responses we get from MCU
+   output reg  [7:0]  latency,   // recent estimate of MCU round-trip time
    input  wire        single,    // single photon detected locally
    output reg  [15:0] spword,    // most recent "special word" from MCU
    output reg         runmode,   // are we in data-taking mode?
@@ -29,7 +34,11 @@ module rocstar_mcu_link
    );
     // Initialize registered outputs to avoid 'X' values in simulation at t=0
     initial begin
-        spword <= 16'b0;
+        badidle <= 1'b0;
+        numsingl <= 1'b0;
+        numcoinc <= 1'b0;
+        latency <= 1'b0;
+        spword <= 1'b0;
         runmode <= 1'b0;
         sync_clk <= 1'b0;
         save_clk <= 1'b0;
@@ -53,10 +62,23 @@ module rocstar_mcu_link
     // Observe incoming data words and report messages from MCU
     reg [15:0] spword_temp = 16'b0;
     reg [4:0] do_sp_shift = 5'b0;
+    reg [3:0] prev_mcu = 4'b0;
+    reg [7:0] count_mcu_latency = 1'b0;
     always @ (posedge clk) begin
-        ncoinc <= runmode && (from_mcu == K_NCOIN);
-        pcoinc <= runmode && (from_mcu == K_PCOIN);
-        dcoinc <= runmode && (from_mcu == K_DCOIN);
+        ncoinc <= runmode && !do_sp_shift && (from_mcu == K_NCOIN);
+        pcoinc <= runmode && !do_sp_shift && (from_mcu == K_PCOIN);
+        dcoinc <= runmode && !do_sp_shift && (from_mcu == K_DCOIN);
+        if (single) begin
+            count_mcu_latency <= 1'b0;
+        end else if (~count_mcu_latency) begin
+            // stop incrementing once all bits are set
+            count_mcu_latency <= count_mcu_latency + 1'b1;
+        end
+        if (ncoinc || pcoinc || dcoinc) begin
+            numcoinc <= numcoinc + 1'b1;
+            latency <= count_mcu_latency;
+        end
+        if (rst) numcoinc <= 1'b0;
         // If a K_SPECL word is seen, then a shift register
         // coordinates collecting next 4 words from MCU, to form the
         // 16-bit 'spword' payload.
@@ -83,6 +105,12 @@ module rocstar_mcu_link
             sync_clk <= 1'b0;
             save_clk <= 1'b0;
         end
+        if ((from_mcu == K_IDLE1 && prev_mcu != K_IDLE0) ||
+            (from_mcu == K_IDLE2 && prev_mcu != K_IDLE1) ||
+            (from_mcu == K_IDLE3 && prev_mcu != K_IDLE2) ||
+            (from_mcu == K_IDLE0 && prev_mcu == K_IDLE0))
+          badidle <= badidle + 1'b1;
+        prev_mcu <= from_mcu;
     end
     // Mnemonic names for Finite State Machine states
     localparam 
@@ -92,6 +120,8 @@ module rocstar_mcu_link
     reg [3:0] fsm_d = START;  // combinational logic
     reg [7:0] out_d;  // combinational logic
     reg [31:0] ticks = 0;  // useful to display time in units of 'clk'
+    reg [15:0] idlecnt = 0;  // counts up each time we transmit IDLE3 to MCU
+    reg idlecnt_inc = 0;  // combinational logic
     always @ (posedge clk) begin
         // Update 'fsm' FF from 'fsm_d' next-state value, except on reset
         if (rst) begin
@@ -100,11 +130,24 @@ module rocstar_mcu_link
             fsm <= fsm_d;
         end
         // Update 'to_mcu' FF from 'out_d' next value
-        to_mcu <= out_d;
+        if (do_testp) begin
+            // Allows testing data link with fixed output pattern
+            to_mcu <= testpatt;
+        end else begin
+            to_mcu <= out_d;
+        end
         // Previous state on next clock is what 'fsm' is now
         fsm_prev <= fsm;
         // Increment 'ticks' counter
         ticks <= ticks + 1'd1;
+        // Increment count of times we've passed through IDLE3 state
+        if (idlecnt_inc) idlecnt <= idlecnt + 1'b1;
+        // Count number of single triggers
+        if (rst) begin
+            numsingl <= 1'b0;
+        end else if (single) begin
+            numsingl <= numsingl + 1'b1;
+        end
     end
     // This COMBINATIONAL always block contains the next-state logic
     // and other state-dependent combinational logic.
@@ -112,40 +155,42 @@ module rocstar_mcu_link
         // Assign default values to avoid risk of implicit latches
         fsm_d = START;
         out_d = 4'b0000;
+        idlecnt_inc = 1'b0;
         if (0) $strobe("fsm_d=%1d fsm=%1d fsm_prev=%1d @%1d",
                        fsm_d, fsm, fsm_prev, ticks);
         case (fsm)
             START:
               begin
                   out_d = 8'b01000000;
-                  out_d[5:4] = clk_ctr[3:2];
-                  out_d[1:0] = clk_ctr[1:0];
+                  out_d[5:4] = idlecnt[3:2];
+                  out_d[1:0] = idlecnt[1:0];
                   fsm_d = IDLE1;
                   if (single) fsm_d = SINGL;
               end
             IDLE1:
               begin
                   out_d = 8'b01000100;
-                  out_d[5:4] = clk_ctr[7:6];
-                  out_d[1:0] = clk_ctr[5:4];
+                  out_d[5:4] = idlecnt[7:6];
+                  out_d[1:0] = idlecnt[5:4];
                   fsm_d = IDLE2;
                   if (single) fsm_d = SINGL;
               end
             IDLE2:
               begin
                   out_d = 8'b01001000;
-                  out_d[5:4] = clk_ctr[11:10];
-                  out_d[1:0] = clk_ctr[9:8];
+                  out_d[5:4] = idlecnt[11:10];
+                  out_d[1:0] = idlecnt[9:8];
                   fsm_d = IDLE3;
                   if (single) fsm_d = SINGL;
               end
             IDLE3:
               begin
                   out_d = 8'b01001100;
-                  out_d[5:4] = clk_ctr[15:14];
-                  out_d[1:0] = clk_ctr[13:12];
+                  out_d[5:4] = idlecnt[15:14];
+                  out_d[1:0] = idlecnt[13:12];
                   fsm_d = START;
                   if (single) fsm_d = SINGL;
+                  idlecnt_inc = 1'b1;
               end
             SINGL:
               begin

@@ -31,6 +31,16 @@ set siglist {
     #tp.rmB1.ncoinc
     #tp.rmB1.pcoinc
     #tp.rmB1.dcoinc
+    tb.ml.A1.badidle
+    tb.ml.B1.badidle
+    tb.rmA1.badidle
+    tb.rmB1.badidle
+    tb.rmA1.numsingl
+    tb.rmA1.numcoinc
+    tb.rmA1.latency
+    tb.rmB1.numsingl
+    tb.rmB1.numcoinc
+    tb.rmB1.latency
     tb.ml.baddr 
     tb.ml.bwr 
     tb.ml.bstrobe 

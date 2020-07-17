@@ -44,15 +44,23 @@ module tb;
     wire runmode_B1, sync_clk_B1, save_clk_B1;
     wire pcoinc_B1, dcoinc_B1, ncoinc_B1;
     wire rst = ml.rst;  // We can do this in test bench code!
+    reg [7:0] testpatt = 0;
+    reg do_testp_A1 = 0, do_testp_B1 = 0;
+    wire [15:0] badidle_A1, badidle_B1;
+    wire [15:0] numsingl_A1, numsingl_B1;
+    wire [15:0] numcoinc_A1, numcoinc_B1;
+    wire [7:0] latency_A1, latency_B1;
     rocstar_mcu_link rmA1
       (.clk(clk), .rst(rst), .from_mcu(A1out), .to_mcu(A1in),
-       .clk_ctr(clkcnt_A1[15:0]),
+       .badidle(badidle_A1), .testpatt(testpatt), .do_testp(do_testp_A1),
+       .numsingl(numsingl_A1), .numcoinc(numcoinc_A1), .latency(latency_A1),
        .single(single_A1), .spword(spword_A1), .runmode(runmode_A1),
        .sync_clk(sync_clk_A1), .save_clk(save_clk_A1),
        .pcoinc(pcoinc_A1), .dcoinc(dcoinc_A1), .ncoinc(ncoinc_A1));
     rocstar_mcu_link rmB1
       (.clk(clk), .rst(rst), .from_mcu(B1out), .to_mcu(B1in),
-       .clk_ctr(clkcnt_B1[15:0]),
+       .badidle(badidle_B1), .testpatt(testpatt), .do_testp(do_testp_B1),
+       .numsingl(numsingl_B1), .numcoinc(numcoinc_B1), .latency(latency_B1),
        .single(single_B1), .spword(spword_B1), .runmode(runmode_B1),
        .sync_clk(sync_clk_B1), .save_clk(save_clk_B1),
        .pcoinc(pcoinc_B1), .dcoinc(dcoinc_B1), .ncoinc(ncoinc_B1));

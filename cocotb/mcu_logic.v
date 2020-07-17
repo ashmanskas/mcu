@@ -40,6 +40,22 @@ module mcu_logic
         // Pulse 'do_spword' for one clk cycle upon write to 'spword'
         do_spword <= (baddr == 16'h0002 && bwr && bstrobe);
     end
+    // Provide for output of fixed test pattern for testing data link
+    wire [3:0] testpatt;
+    breg #(16'h0003,4) r0003(ibus, obus, testpatt);
+    wire [15:0] do_testpatt;
+    breg #(16'h0004) r0004(ibus, obus, do_testpatt);
+    // Allow "bad idle" counts to be read out over bus
+    wire [15:0] badidle_A1, badidle_A2, badidle_A3, badidle_A4;
+    wire [15:0] badidle_B1, badidle_B2, badidle_B3, badidle_B4;
+    bror #(16'h0010) r0010(ibus, obus, badidle_A1);
+    bror #(16'h0011) r0011(ibus, obus, badidle_A2);
+    bror #(16'h0012) r0012(ibus, obus, badidle_A3);
+    bror #(16'h0013) r0013(ibus, obus, badidle_A4);
+    bror #(16'h0014) r0014(ibus, obus, badidle_B1);
+    bror #(16'h0015) r0015(ibus, obus, badidle_B2);
+    bror #(16'h0016) r0016(ibus, obus, badidle_B3);
+    bror #(16'h0017) r0017(ibus, obus, badidle_B4);
     // We'll create some sort of reset logic later
     reg rst = 0;
     // Signals needed for coincidence-forming
@@ -52,30 +68,46 @@ module mcu_logic
                 .pcoincB(pcB1), .ncoincB(ncB1));
     assign {pcA2, pcA3, pcA4, ncA2, ncA3, ncA4} = 6'b0;  // skip 2,3,4 for now
     assign {pcB2, pcB3, pcB4, ncB2, ncB3, ncB4} = 6'b0;
-    // Instantiate a module to process each of the 8 cables;
-    // this is highly oversimplified for now
+    // Instantiate a module to process each of the eight cables; this
+    // is somewhat simplified for now
     cable A1 (.clk(clk), .rst(rst), .in(A1in), .out(A1out),
+              .badidle(badidle_A1),
+              .testpatt(testpatt), .do_testp(do_testpatt[0]),
               .spword(spword), .do_spw(do_spword),
               .single(sA1), .pcoinc(pcA1), .ncoinc(ncA1));
     cable A2 (.clk(clk), .rst(rst), .in(A2in), .out(A2out),
+              .testpatt(testpatt), .do_testp(do_testpatt[1]),
+              .badidle(badidle_A2),
               .spword(spword), .do_spw(do_spword),
               .single(sA2), .pcoinc(pcA2), .ncoinc(ncA2));
     cable A3 (.clk(clk), .rst(rst), .in(A3in), .out(A3out),
+              .badidle(badidle_A3),
+              .testpatt(testpatt), .do_testp(do_testpatt[2]),
               .spword(spword), .do_spw(do_spword),
               .single(sA3), .pcoinc(pcA3), .ncoinc(ncA3));
     cable A4 (.clk(clk), .rst(rst), .in(A4in), .out(A4out),
+              .badidle(badidle_A4),
+              .testpatt(testpatt), .do_testp(do_testpatt[3]),
               .spword(spword), .do_spw(do_spword),
               .single(sA4), .pcoinc(pcA4), .ncoinc(ncA4));
     cable B1 (.clk(clk), .rst(rst), .in(B1in), .out(B1out),
+              .badidle(badidle_B1),
+              .testpatt(testpatt), .do_testp(do_testpatt[4]),
               .spword(spword), .do_spw(do_spword),
               .single(sB1), .pcoinc(pcB1), .ncoinc(ncB1));
     cable B2 (.clk(clk), .rst(rst), .in(B2in), .out(B2out),
+              .badidle(badidle_B2),
+              .testpatt(testpatt), .do_testp(do_testpatt[5]),
               .spword(spword), .do_spw(do_spword),
               .single(sB2), .pcoinc(pcB2), .ncoinc(ncB2));
     cable B3 (.clk(clk), .rst(rst), .in(B3in), .out(B3out),
+              .badidle(badidle_B3),
+              .testpatt(testpatt), .do_testp(do_testpatt[6]),
               .spword(spword), .do_spw(do_spword),
               .single(sB3), .pcoinc(pcB3), .ncoinc(ncB3));
     cable B4 (.clk(clk), .rst(rst), .in(B4in), .out(B4out),
+              .badidle(badidle_B4),
+              .testpatt(testpatt), .do_testp(do_testpatt[7]),
               .spword(spword), .do_spw(do_spword),
               .single(sB4), .pcoinc(pcB4), .ncoinc(ncB4));
 endmodule  // mcu_logic
@@ -152,22 +184,35 @@ endmodule
  */
 module cable
   (
-   input  wire        clk,     // 100 MHz clock
-   input  wire        rst,     // synchronous reset
-   input  wire [7:0]  in,      // 8-bit input data (from ROCSTAR)
-   output reg  [3:0]  out,     // 4-bit output data (to ROCSTAR)
-   input  wire [15:0] spword,  // "special" command word to transmit
-   input  wire        do_spw,  // pulse: emit a special word now
-   output reg         single,  // single photon detected for this cable
-   input  wire        pcoinc,  // prompt coincidence confirmed for this cable
-   input  wire        ncoinc   // no coincidence found for this cable
+   input  wire        clk,       // 100 MHz clock
+   input  wire        rst,       // synchronous reset
+   input  wire [7:0]  in,        // 8-bit input data (from ROCSTAR)
+   output reg  [3:0]  out,       // 4-bit output data (to ROCSTAR)
+   output reg [15:0]  badidle,   // count IDLE words with unexpected contents
+   input  wire [3:0]  testpatt,  // fixed 4-bit 'out' for testing data link
+   input  wire        do_testp,  // enable fixed 'testpatt' output
+   input  wire [15:0] spword,    // "special" command word to transmit
+   input  wire        do_spw,    // pulse: emit a special word now
+   output reg         single,    // single photon detected for this cable
+   input  wire        pcoinc,    // prompt coincidence confirmed for cable
+   input  wire        ncoinc     // no coincidence found for this cable
    );
     // Initialize registered outputs to avoid 'X' values in simulation at t=0
     initial begin
         out <= 4'b0000;
+        badidle <= 16'b0;
         single <= 1'b0;
     end
     // Observe incoming data words and report single-photon triggers
+    localparam I_TRIGMASK = 8'b10000000;
+    localparam I_IDLEMASK = 8'b11001100;
+    localparam I_IDLE0 = 8'b01000000;
+    localparam I_IDLE1 = 8'b01000100;
+    localparam I_IDLE2 = 8'b01001000;
+    localparam I_IDLE3 = 8'b01001100;
+    reg badidle_inc = 0;
+    reg [7:0] inprev = 0;  // keep track of previous input word
+    reg [15:0] idlecnt = 0, new_idlecnt = 0;
     always @ (posedge clk) begin
         // For the moment, this "single" signal will simply indicate
         // the presence of a single-photon trigger from this cable
@@ -178,7 +223,43 @@ module cable
         // will make use of bits 6..0 ("time offset w.r.t. clock") to
         // form a less coarse concidence window (probably something
         // like +/- a few ns).
-        single <= in[7];
+        single <= ((in & I_TRIGMASK) != 8'b0);
+        badidle_inc <= 1'b0;  // if 1, increment count of out-of-order idles
+        if ((in & I_TRIGMASK) == 8'b0) begin
+            if ((in & I_IDLEMASK) == I_IDLE0) begin
+                new_idlecnt[3:2] <= in[5:4];
+                new_idlecnt[1:0] <= in[1:0];
+                if ((inprev & I_TRIGMASK) == 8'b0 &&
+                    (inprev & I_IDLEMASK) != I_IDLE3)
+                  badidle_inc <= 1'b1;
+            end else if ((in & I_IDLEMASK) == I_IDLE1) begin
+                new_idlecnt[7:6] <= in[5:4];
+                new_idlecnt[5:4] <= in[1:0];
+                if ((inprev & I_IDLEMASK) != I_IDLE0) 
+                  badidle_inc <= 1'b1;
+            end else if ((in & I_IDLEMASK) == I_IDLE2) begin
+                new_idlecnt[11:10] <= in[5:4];
+                new_idlecnt[9:8]   <= in[1:0];
+                if ((inprev & I_IDLEMASK) != I_IDLE1) 
+                  badidle_inc <= 1'b1;
+            end else if ((in & I_IDLEMASK) == I_IDLE3) begin
+                new_idlecnt[15:14] <= in[5:4];
+                new_idlecnt[13:12] <= in[1:0];
+                if ((inprev & I_IDLEMASK) != I_IDLE2) 
+                  badidle_inc <= 1'b1;
+            end else begin
+                badidle_inc <= 1'b1;
+            end
+        end
+        if ((inprev & I_IDLEMASK) == I_IDLE3) begin
+            // The transmitted pattern should increment each time the
+            // IDLE3 symbol is sent.
+            if (new_idlecnt != ((idlecnt + 1'b1) & 16'hffff))
+              badidle_inc <= 1'b1;
+            idlecnt <= new_idlecnt;
+        end
+        if (badidle_inc) badidle <= badidle + 1'b1;
+        inprev <= in;
     end
     // Mnemonic names for values written to cable (move to include file)
     localparam K_IDLE0 = 4'b0111;  // cycle through 4 IDLE words
@@ -206,7 +287,12 @@ module cable
             fsm <= fsm_d;
         end
         // Update 'out' FF from 'out_d' next value
-        out <= out_d;
+        if (do_testp) begin
+            // Allows testing data link with fixed output pattern
+            out <= testpatt;
+        end else begin
+            out <= out_d;
+        end
         // Previous state on next clock is what 'fsm' is now
         fsm_prev <= fsm;
         // Increment 'ticks' counter
@@ -301,8 +387,6 @@ module cable
               end
         endcase
     end
-    
-    
 endmodule  // cable
 
 /*
