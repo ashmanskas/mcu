@@ -145,19 +145,57 @@ module coinc
     end
     reg [2:0] srA = 0;  // shift register for 3 successive clock cycles ..
     reg [2:0] srB = 0;  // .. of singleA or singleB data
+    reg [5:0] ofsAdel0 = 0, ofsAdel1 = 0, ofsAdel2 = 0;
+    reg [5:0] ofsBdel0 = 0, ofsBdel1 = 0, ofsBdel2 = 0;
+    // Create sign-extended copies of the inputs to the subtraction
+    wire [7:0] oAd1 = {ofsAdel1[5], ofsAdel1[5], ofsAdel1[5:0]};
+    wire [7:0] oBd0 = {ofsBdel0[5], ofsBdel0[5], ofsBdel0[5:0]};
+    wire [7:0] oBd1 = {ofsBdel1[5], ofsBdel1[5], ofsBdel1[5:0]};
+    wire [7:0] oBd2 = {ofsBdel2[5], ofsBdel2[5], ofsBdel2[5:0]};
+    // Calculated difference for match on same clock cycle
+    wire [7:0] diff1 = oBd1 - oAd1;
+    // Calculated diff for match when B one cycle later than A
+    wire [7:0] diff0 = (oBd0 + 8'd32) - oAd1;
+    // Calculated diff for match when B one cycle earlier than A
+    wire [7:0] diff2 = (oBd2 - 8'd32) - oAd1;
+    reg [7:0] coincdiff = 0;  // temporary: record difference for coinc
     always @ (posedge clk) begin
         srA[2:0] <= {srA[1:0], singleA};  // implement shift register
         srB[2:0] <= {srB[1:0], singleB};
+        ofsAdel2 <= ofsAdel1;  // create delayed copies of offsetA
+        ofsAdel1 <= ofsAdel0;
+        ofsAdel0 <= offsetA;
+        ofsBdel2 <= ofsBdel1;  // create delayed copies of offsetB
+        ofsBdel1 <= ofsBdel0;
+        ofsBdel0 <= offsetB;
         if (srA[1]) begin
             // response is needed (with proper latency) for singleA
             if (srB == 3'b000) begin
                 // No matching "B" event is seen for -1,0,+1 clock cycles
                 pcoincA <= 1'b0;
                 ncoincA <= 1'b1;
-            end else begin
+                coincdiff <= 8'b0;
+            end else if (srB[1]) begin  // match for same clock cycle
                 // matching "B" event is seen (within allowed window)
                 pcoincA <= 1'b1;
                 ncoincA <= 1'b0;
+                coincdiff <= diff1;
+            end else if (srB[0]) begin  // B is one cycle later than A
+                // matching "B" event is seen (within allowed window)
+                pcoincA <= 1'b1;
+                ncoincA <= 1'b0;
+                coincdiff <= diff0;
+            end else if (srB[2]) begin  // B is one cycle earlier than A
+                // matching "B" event is seen (within allowed window)
+                pcoincA <= 1'b1;
+                ncoincA <= 1'b0;
+                coincdiff <= diff2;
+            end else begin
+                // This should never happen!
+                $display("ERROR!  this should never happen!");
+                pcoincA <= 1'b1;
+                ncoincA <= 1'b0;
+                coincdiff <= 8'b0;
             end
         end else begin
             // no singleA => neither accept nor reject is issued to A

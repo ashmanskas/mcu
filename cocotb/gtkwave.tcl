@@ -25,6 +25,20 @@ set siglist {
     tb.ml.coinc.offsetB 
     tb.ml.coinc.ncoincA 
     tb.ml.coinc.pcoincA
+    tb.ml.coinc.ofsAdel0
+    tb.ml.coinc.ofsAdel1
+    tb.ml.coinc.ofsAdel2
+    tb.ml.coinc.ofsBdel0
+    tb.ml.coinc.ofsBdel1
+    tb.ml.coinc.ofsBdel2
+    tb.ml.coinc.oAd1
+    tb.ml.coinc.oBd0
+    tb.ml.coinc.0Bd1
+    tb.ml.coinc.0Bd2
+    tb.ml.coinc.diff0
+    tb.ml.coinc.diff1
+    tb.ml.coinc.diff2
+    tb.ml.coinc.coincdiff
     #tp.rmA1.ncoinc
     #tp.rmA1.pcoinc
     #tp.rmA1.dcoinc
