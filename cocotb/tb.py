@@ -179,9 +179,9 @@ class Tester:
                                  o.trig_history[-MCU_LATENCY],
                                  o.trig_history))
                 self.check(not o.trig_history[-MCU_LATENCY])
-            # Next 3 lines are to make the if statement more readable
-            do_single = random.random() < single_probability
             time_offset = 0  # may be overridden below
+            # Next 2 lines are to make the if statement more readable
+            do_single = random.random() < single_probability
             min_idle_ok = o.nclk_since_trigger >= MIN_IDLE_BETWEEN_TRIG
             if do_coinc_next_clk:
                 # We have a pending delayed coincidence from previous clk
