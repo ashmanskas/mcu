@@ -62,8 +62,10 @@ module mcu_logic
     wire sA1, sA2, sA3, sA4, sB1, sB2, sB3, sB4;
     wire pcA1, pcA2, pcA3, pcA4, pcB1, pcB2, pcB3, pcB4;
     wire ncA1, ncA2, ncA3, ncA4, ncB1, ncB2, ncB3, ncB4;
+    wire [5:0] offsetA1, offsetB1;
     coinc coinc(.clk(clk), .rst(rst), 
                 .singleA(sA1), .singleB(sB1),
+                .offsetA(offsetA1), .offsetB(offsetB1),
                 .pcoincA(pcA1), .ncoincA(ncA1), 
                 .pcoincB(pcB1), .ncoincB(ncB1));
     assign {pcA2, pcA3, pcA4, ncA2, ncA3, ncA4} = 6'b0;  // skip 2,3,4 for now
@@ -74,7 +76,8 @@ module mcu_logic
               .badidle(badidle_A1),
               .testpatt(testpatt), .do_testp(do_testpatt[0]),
               .spword(spword), .do_spw(do_spword),
-              .single(sA1), .pcoinc(pcA1), .ncoinc(ncA1));
+              .single(sA1), .offset(offsetA1),
+              .pcoinc(pcA1), .ncoinc(ncA1));
     cable A2 (.clk(clk), .rst(rst), .in(A2in), .out(A2out),
               .testpatt(testpatt), .do_testp(do_testpatt[1]),
               .badidle(badidle_A2),
@@ -94,7 +97,8 @@ module mcu_logic
               .badidle(badidle_B1),
               .testpatt(testpatt), .do_testp(do_testpatt[4]),
               .spword(spword), .do_spw(do_spword),
-              .single(sB1), .pcoinc(pcB1), .ncoinc(ncB1));
+              .single(sB1), .offset(offsetB1),
+              .pcoinc(pcB1), .ncoinc(ncB1));
     cable B2 (.clk(clk), .rst(rst), .in(B2in), .out(B2out),
               .badidle(badidle_B2),
               .testpatt(testpatt), .do_testp(do_testpatt[5]),
@@ -124,14 +128,16 @@ endmodule  // mcu_logic
 
 module coinc
   (
-   input  wire clk,      // 100 MHz clock
-   input  wire rst,      // synchronous reset
-   input  wire singleA,  // single trigger from A side
-   input  wire singleB,  // single trigger from B side
-   output reg  pcoincA,  // accept (prompt) to A side, with proper latency
-   output reg  ncoincA,  // reject to A side, with proper latency
-   output reg  pcoincB,  // accept (prompt) to B side, with proper latency
-   output reg  ncoincB   // reject to B side, with proper latency
+   input  wire       clk,      // 100 MHz clock
+   input  wire       rst,      // synchronous reset
+   input  wire       singleA,  // single trigger from A side
+   input  wire       singleB,  // single trigger from B side
+   input  wire [5:0] offsetA,  // trig A offset w.r.t. clk edge
+   input  wire [5:0] offsetB,  // trig B offset w.t.t. clk edge
+   output reg        pcoincA,  // accept (prompt) to A, with proper latency
+   output reg        ncoincA,  // reject to A side, with proper latency
+   output reg        pcoincB,  // accept (prompt) to B, with proper latency
+   output reg        ncoincB   // reject to B side, with proper latency
    );
     // Initialize registered outputs to avoid 'X' values in simulation at t=0
     initial begin
@@ -194,6 +200,7 @@ module cable
    input  wire [15:0] spword,    // "special" command word to transmit
    input  wire        do_spw,    // pulse: emit a special word now
    output reg         single,    // single photon detected for this cable
+   output reg  [5:0]  offset,    // single trig offset w.r.t. clk edge
    input  wire        pcoinc,    // prompt coincidence confirmed for cable
    input  wire        ncoinc     // no coincidence found for this cable
    );
@@ -202,6 +209,7 @@ module cable
         out <= 4'b0000;
         badidle <= 16'b0;
         single <= 1'b0;
+        offset <= 6'b0;
     end
     // Observe incoming data words and report single-photon triggers
     localparam I_TRIGMASK = 8'b10000000;
@@ -223,7 +231,15 @@ module cable
         // will make use of bits 6..0 ("time offset w.r.t. clock") to
         // form a less coarse concidence window (probably something
         // like +/- a few ns).
-        single <= ((in & I_TRIGMASK) != 8'b0);
+        if ((in & I_TRIGMASK) != 8'b0) begin
+            // We got a single trigger
+            single <= 1'b1;
+            offset <= in[6:1];
+        end else begin
+            // We did not get a single trigger
+            single <= 1'b0;
+            offset <= 6'b0;
+        end
         badidle_inc <= 1'b0;  // if 1, increment count of out-of-order idles
         if ((in & I_TRIGMASK) == 8'b0) begin
             if ((in & I_IDLEMASK) == I_IDLE0) begin

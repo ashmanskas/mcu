@@ -18,9 +18,11 @@ set siglist {
     tb.ml.A1out 
     tb.ml.B1out 
     tb.ml.coinc.singleA
+    tb.ml.coinc.offsetA
     #tb.rmA1.single
     #tb.rmB1.single
     tb.ml.coinc.singleB 
+    tb.ml.coinc.offsetB 
     tb.ml.coinc.ncoincA 
     tb.ml.coinc.pcoincA
     #tp.rmA1.ncoinc

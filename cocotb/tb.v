@@ -38,6 +38,8 @@ module tb;
     // soon embed into the rocstar board's firmware.
     reg single_A1 = 0, single_A2 = 0, single_A3 = 0, single_A4 = 0;
     reg single_B1 = 0, single_B2 = 0, single_B3 = 0, single_B4 = 0;
+    reg [5:0] offset_A1 = 0, offset_A2 = 0, offset_A3 = 0, offset_A4 = 0;
+    reg [5:0] offset_B1 = 0, offset_B2 = 0, offset_B3 = 0, offset_B4 = 0;
     wire [15:0] spword_A1, spword_B1;
     wire runmode_A1, sync_clk_A1, save_clk_A1;
     wire pcoinc_A1, dcoinc_A1, ncoinc_A1;
@@ -54,14 +56,16 @@ module tb;
       (.clk(clk), .rst(rst), .from_mcu(A1out), .to_mcu(A1in),
        .badidle(badidle_A1), .testpatt(testpatt), .do_testp(do_testp_A1),
        .numsingl(numsingl_A1), .numcoinc(numcoinc_A1), .latency(latency_A1),
-       .single(single_A1), .spword(spword_A1), .runmode(runmode_A1),
+       .single(single_A1), .offset(offset_A1),
+       .spword(spword_A1), .runmode(runmode_A1),
        .sync_clk(sync_clk_A1), .save_clk(save_clk_A1),
        .pcoinc(pcoinc_A1), .dcoinc(dcoinc_A1), .ncoinc(ncoinc_A1));
     rocstar_mcu_link rmB1
       (.clk(clk), .rst(rst), .from_mcu(B1out), .to_mcu(B1in),
        .badidle(badidle_B1), .testpatt(testpatt), .do_testp(do_testp_B1),
        .numsingl(numsingl_B1), .numcoinc(numcoinc_B1), .latency(latency_B1),
-       .single(single_B1), .spword(spword_B1), .runmode(runmode_B1),
+       .single(single_B1), .offset(offset_B1),
+       .spword(spword_B1), .runmode(runmode_B1),
        .sync_clk(sync_clk_B1), .save_clk(save_clk_B1),
        .pcoinc(pcoinc_B1), .dcoinc(dcoinc_B1), .ncoinc(ncoinc_B1));
     always @ (posedge clk) begin

@@ -24,6 +24,7 @@ module rocstar_mcu_link
    output reg  [15:0] numcoinc,  // count # *coinc responses we get from MCU
    output reg  [7:0]  latency,   // recent estimate of MCU round-trip time
    input  wire        single,    // single photon detected locally
+   input  wire [5:0]  offset,    // single photon offset w.r.t. clk edge
    output reg  [15:0] spword,    // most recent "special word" from MCU
    output reg         runmode,   // are we in data-taking mode?
    output reg         sync_clk,  // pulse: reset clock counters to zero
@@ -64,7 +65,9 @@ module rocstar_mcu_link
     reg [4:0] do_sp_shift = 5'b0;
     reg [3:0] prev_mcu = 4'b0;
     reg [7:0] count_mcu_latency = 1'b0;
+    reg [5:0] offset_delayed = 6'b0;
     always @ (posedge clk) begin
+        offset_delayed <= offset;  // delay by one clock cycle
         ncoinc <= runmode && !do_sp_shift && (from_mcu == K_NCOIN);
         pcoinc <= runmode && !do_sp_shift && (from_mcu == K_PCOIN);
         dcoinc <= runmode && !do_sp_shift && (from_mcu == K_DCOIN);
@@ -194,7 +197,9 @@ module rocstar_mcu_link
               end
             SINGL:
               begin
-                  out_d = 8'b10000000;  // bits 6:0 will be offset wrt clk
+                  // bits 6:1 are offset wrt clk
+                  out_d = 8'b10000000;
+                  out_d[6:1] = offset_delayed;
                   fsm_d = START;
                   if (single) fsm_d = SINGL;  // probably will never happen
               end

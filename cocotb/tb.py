@@ -112,6 +112,7 @@ class Tester:
         tb_clkcnt <= random.randint(0,65535)
         tb_clksav = getattr(self.dut, "clksav_"+whoami)
         single_net = getattr(self.dut, "single_"+whoami)
+        offset_net = getattr(self.dut, "offset_"+whoami)
         runmode_net = getattr(self.dut, "runmode_"+whoami)
         # I spread the clk_counter bits out like this because mcu_in bits
         # 7:4 are on one wire and bits 3:0 are on another wire.  I want to
@@ -180,6 +181,7 @@ class Tester:
                 self.check(not o.trig_history[-MCU_LATENCY])
             # Next 3 lines are to make the if statement more readable
             do_single = random.random() < single_probability
+            time_offset = 0  # may be overridden below
             min_idle_ok = o.nclk_since_trigger >= MIN_IDLE_BETWEEN_TRIG
             if do_coinc_next_clk:
                 # We have a pending delayed coincidence from previous clk
@@ -205,9 +207,9 @@ class Tester:
                 do_coinc_next_clk = False
             if (min_idle_ok and (do_single or do_coinc)):
                 # Issue a single-photon trigger
-                time_offset = random.randint(0,127)
-                time_offset = 0  # easier to debug!
-                time_offset &= 0x7f  # this should do nothing
+                time_offset = random.randint(0,63)
+                if False: time_offset = 0  # easier to debug!
+                time_offset &= 0x3f  # this should do nothing
                 do_trigger_now = 1
                 o.nclk_since_trigger = 0
             else:
@@ -215,6 +217,7 @@ class Tester:
                 o.nclk_since_trigger += 1
             o.trig_history.append(do_trigger_now)
             single_net <= do_trigger_now
+            offset_net <= time_offset
                 
     async def run_test1(self):
         """initial very simple test of mcu_logic module"""
