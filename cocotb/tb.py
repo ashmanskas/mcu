@@ -264,6 +264,11 @@ class Tester:
             self.fake_rocstar("B1", mcu_in=dut.B1in, mcu_out=dut.B1out))
         self.fr["B1"].forked_coroutine = _
 
+        # Initialize 'diffmax' value
+        await self.wclk(20)
+        diffmax = 16  # maybe this will vary from run to run later
+        await self.wr(0x0005, diffmax, check=dut.ml.diffmax)
+        
         # Run for a while, then tell mcu to transmit special commands
         # to rocstar boards to save the current values of their clock
         # counters, then synchronize their clock counters and start
