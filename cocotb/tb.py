@@ -224,6 +224,7 @@ class Tester:
                 if False: time_offset = random.randint(0,63)
                 if False: time_offset = 0  # easier to debug!
                 time_offset = t_offset
+                time_offset += random.randint(-3,+3)
                 if time_offset < -32: time_offset = -32
                 if time_offset > +31: time_offset = +31
                 time_offset &= 0x3f

@@ -154,11 +154,15 @@ module coinc
     wire [7:0] oBd2 = {ofsBdel2[5], ofsBdel2[5], ofsBdel2[5:0]};
     // Calculated difference for match on same clock cycle
     wire [7:0] diff1 = oBd1 - oAd1;
+    wire [7:0] absdiff1 = diff1[7] ? -diff1 : diff1;
     // Calculated diff for match when B one cycle later than A
     wire [7:0] diff0 = (oBd0 + 8'd32) - oAd1;
+    wire [7:0] absdiff0 = diff0[7] ? -diff0 : diff0;
     // Calculated diff for match when B one cycle earlier than A
     wire [7:0] diff2 = (oBd2 - 8'd32) - oAd1;
+    wire [7:0] absdiff2 = diff2[7] ? -diff2 : diff2;
     reg [7:0] coincdiff = 0;  // temporary: record difference for coinc
+    reg [7:0] diffmax = 16;  // this will be programmable later
     always @ (posedge clk) begin
         srA[2:0] <= {srA[1:0], singleA};  // implement shift register
         srB[2:0] <= {srB[1:0], singleB};
@@ -175,26 +179,30 @@ module coinc
                 pcoincA <= 1'b0;
                 ncoincA <= 1'b1;
                 coincdiff <= 8'b0;
-            end else if (srB[1]) begin  // match for same clock cycle
+            end else if (srB[1] && absdiff1 <= diffmax) begin
+                // match for same clock cycle
                 // matching "B" event is seen (within allowed window)
                 pcoincA <= 1'b1;
                 ncoincA <= 1'b0;
-                coincdiff <= diff1;
-            end else if (srB[0]) begin  // B is one cycle later than A
+                coincdiff <= absdiff1;
+            end else if (srB[0] && absdiff0 <= diffmax) begin
+                // B is one cycle later than A
                 // matching "B" event is seen (within allowed window)
                 pcoincA <= 1'b1;
                 ncoincA <= 1'b0;
-                coincdiff <= diff0;
-            end else if (srB[2]) begin  // B is one cycle earlier than A
+                coincdiff <= absdiff0;
+            end else if (srB[2] && absdiff2 <= diffmax) begin  
+                // B is one cycle earlier than A
                 // matching "B" event is seen (within allowed window)
                 pcoincA <= 1'b1;
                 ncoincA <= 1'b0;
-                coincdiff <= diff2;
+                coincdiff <= absdiff2;
             end else begin
-                // This should never happen!
-                $display("ERROR!  this should never happen!");
-                pcoincA <= 1'b1;
-                ncoincA <= 1'b0;
+                // This can happen if a coincidence would be found by
+                // the presence of srB inputs, but the time offsets
+                // are larger than diffmax.
+                pcoincA <= 1'b0;
+                ncoincA <= 1'b1;
                 coincdiff <= 8'b0;
             end
         end else begin
