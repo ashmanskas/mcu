@@ -39,6 +39,7 @@ set siglist {
     tb.ml.coinc.diff1
     tb.ml.coinc.diff2
     tb.ml.coinc.coincdiff
+    tb.coinc_t_offset
     #tp.rmA1.ncoinc
     #tp.rmA1.pcoinc
     #tp.rmA1.dcoinc

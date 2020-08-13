@@ -25,6 +25,10 @@ module tb;
        .A1out(A1out), .A2out(A2out), .A3out(A3out), .A4out(A4out),
        .B1out(B1out), .B2out(B2out), .B3out(B3out), .B4out(B4out));
 
+    // This is here to let us look at a python variable from the
+    // Verilog waveform viewer.
+    reg [5:0] coinc_t_offset = 0;
+
     // These variables eventually will be part of the rocstar board
     // firmware; they are here for now so that we can use python code
     // to emulate several rocstar boards' communication with the mcu.

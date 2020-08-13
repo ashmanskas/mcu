@@ -90,12 +90,23 @@ class Tester:
     async def throw_coincidences(self, coinc_probability=0.02):
         """randomly generate coincidences (observed by fake_rocstar)"""
         self.do_coinc_now = False
+        self.coinc_t_offset = 0
         while True:
             await self.wclk()
             if random.random() < coinc_probability:
                 self.do_coinc_now = True
+                # we may expand (-15,15) to a larger range later
+                self.coinc_t_offset = random.randint(-15,15)
+                # This is intended to represent the time when the real
+                # coincident happened w.r.t. the time tickwhen this
+                # method is invoked.  If a given rocstar board reports
+                # the event one clock cycle later, that board's offset
+                # will be different from this value.
             else:
                 self.do_coinc_now = False
+                self.coinc_t_offset = 0
+            # Make 'coinc_t_offset' visible in the waveform viewer
+            self.dut.coinc_t_offset <= self.coinc_t_offset
                 
     async def fake_rocstar(self, whoami, mcu_in, mcu_out,
                            single_probability=0.03):
@@ -150,6 +161,7 @@ class Tester:
         # Keep track of what state the event loop is in
         ticks_since_specl = 0
         # Begin main event loop
+        prev_coinc_t_offset = 0
         while True:
             do_trigger_now = 0
             await self.wclk()  # This loop executes once per clk cycle
@@ -183,10 +195,12 @@ class Tester:
             # Next 2 lines are to make the if statement more readable
             do_single = random.random() < single_probability
             min_idle_ok = o.nclk_since_trigger >= MIN_IDLE_BETWEEN_TRIG
+            t_offset = self.coinc_t_offset  # local copy
             if do_coinc_next_clk:
                 # We have a pending delayed coincidence from previous clk
                 do_coinc = True
                 do_coinc_next_clk = False
+                t_offset = prev_coinc_t_offset - 32
             elif not self.do_coinc_now:
                 # We do not have a new coincidence this clk
                 do_coinc = False
@@ -207,9 +221,12 @@ class Tester:
                 do_coinc_next_clk = False
             if (min_idle_ok and (do_single or do_coinc)):
                 # Issue a single-photon trigger
-                time_offset = random.randint(0,63)
+                if False: time_offset = random.randint(0,63)
                 if False: time_offset = 0  # easier to debug!
-                time_offset &= 0x3f  # this should do nothing
+                time_offset = t_offset
+                if time_offset < -32: time_offset = -32
+                if time_offset > +31: time_offset = +31
+                time_offset &= 0x3f
                 do_trigger_now = 1
                 o.nclk_since_trigger = 0
             else:
@@ -218,6 +235,8 @@ class Tester:
             o.trig_history.append(do_trigger_now)
             single_net <= do_trigger_now
             offset_net <= time_offset
+            # save this value of coinc_t_offset for next time
+            prev_coinc_t_offset = self.coinc_t_offset
                 
     async def run_test1(self):
         """initial very simple test of mcu_logic module"""
