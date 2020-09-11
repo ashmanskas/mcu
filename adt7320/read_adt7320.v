@@ -150,6 +150,7 @@ module read_adt7320
             CMD1:
               begin
                   cmdbyte_d[7:0] = {cmdbyte[6:0], 1'b0};  // shift left
+                  cmdbyte_ena = 1;
                   sclk_d = 1;
                   sclk_ena = 1;
                   if (count == 8) begin
