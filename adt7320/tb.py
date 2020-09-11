@@ -130,12 +130,17 @@ class Tester:
         dut.reset <= 1
         await self.wclk()
         dut.reset <= 0
+        await self.wclk()
+        dut.reset <= 1
+        await self.wclk(1000)
+        dut.addr <= 3
+        dut.reset <= 0
         await self.wclk(10)
 
         # Instantiate emulated ADT7320 chip
         self.adt7320 = cocotb.fork(self.adt7320_emulator())
 
-        await self.wclk(10000)
+        await self.wclk(30000)
         
         # Now kill off the coroutines we forked earlier
         self.adt7320.kill()

@@ -39,6 +39,7 @@ module read_adt7320
             count_to_1MHz <= count_to_1MHz + 1;
             tick_1MHz <= 0;
         end
+        tick_1MHz_d1 <= tick_1MHz;
     end
     // Finite State Machine to issue commands and collect responses
     localparam
