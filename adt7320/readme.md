@@ -1,5 +1,5 @@
 
-=== ADT7320 coding exercise ===
+### ADT7320 coding exercise ###
 
 This really does not belong in the MCU project, but the MCU project is
 the most convenient place for me to put it, since the ashmanskas/mcu
