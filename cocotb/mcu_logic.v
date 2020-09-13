@@ -45,8 +45,6 @@ module mcu_logic
     breg #(16'h0003,4) r0003(ibus, obus, testpatt);
     wire [15:0] do_testpatt;
     breg #(16'h0004) r0004(ibus, obus, do_testpatt);
-    wire [7:0] diffmax;
-    breg #(16'h0005,8) r0005(ibus, obus, diffmax);
     // Allow "bad idle" counts to be read out over bus
     wire [15:0] badidle_A1, badidle_A2, badidle_A3, badidle_A4;
     wire [15:0] badidle_B1, badidle_B2, badidle_B3, badidle_B4;
@@ -136,7 +134,6 @@ module coinc
    input  wire       singleB,  // single trigger from B side
    input  wire [5:0] offsetA,  // trig A offset w.r.t. clk edge
    input  wire [5:0] offsetB,  // trig B offset w.t.t. clk edge
-   input  wire [7:0] diffmax,  // largest allowed absolute time difference
    output reg        pcoincA,  // accept (prompt) to A, with proper latency
    output reg        ncoincA,  // reject to A side, with proper latency
    output reg        pcoincB,  // accept (prompt) to B, with proper latency
@@ -165,6 +162,7 @@ module coinc
     wire [7:0] diff2 = (oBd2 - 8'd32) - oAd1;
     wire [7:0] absdiff2 = diff2[7] ? -diff2 : diff2;
     reg [7:0] coincdiff = 0;  // temporary: record difference for coinc
+    reg [7:0] diffmax = 16;  // this will be programmable later
     always @ (posedge clk) begin
         srA[2:0] <= {srA[1:0], singleA};  // implement shift register
         srB[2:0] <= {srB[1:0], singleB};
@@ -218,11 +216,31 @@ module coinc
                 // No matching "A" event is seen for -1,0,+1 clock cycles
                 pcoincB <= 1'b0;
                 ncoincB <= 1'b1;
-            end else begin
+	        coincdiff <= 8'b0;
+	    end else if (srA[1] && absdiff1 <= diffmax) begin
+	        // match for same clock cycle
                 // matching "A" event is seen (within allowed window)
                 pcoincB <= 1'b1;
                 ncoincB <= 1'b0;
-            end
+	        coincdiff <= absdiff1;
+	    end else if (srA[0] && absdiff0 <= diffmax) begin
+	        // A is one cycle later than B
+	        // matching "A" event is seen (within allowed window)
+	        pcoincB <= 1'b1;
+	        ncoincB <= 1'b0;
+	        coincdiff <= absdiff0;
+	    end else if (srA[2] && absdiff2 <= diffmax) begin
+	       // A is one cycle earlier than B
+	       // matching "A" event is seen (within allowed window)
+	       pcoincB <= 1'b1;
+	       ncoincB <= 1'b0;
+	       coincdiff <= absdiff2;
+            end else begin
+	       // time offsets are large than diffmax
+	       pcoincB <= 1'b0;
+	       ncoincB <= 1'b1;
+	       coincdiff <= 8'b0;
+	    end
         end else begin
             // no singleB => neither accept nor reject is issued to B
             pcoincB <= 1'b0;
