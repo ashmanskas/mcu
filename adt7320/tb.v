@@ -12,10 +12,12 @@ module tb;
     reg         reset=0;
     reg  [2:0]  addr=0;
     reg         dout=0;
-    wire [15:0] result;
-    wire        cs, sclk, din;
+    wire [15:0] result0, result1, result2;
+    wire [2:0]  cs;
+    wire        sclk, din;
     read_adt7320 ra
-      (.clk(clk), .reset(reset), .addr(addr), .result(result),
+      (.clk(clk), .reset(reset), .addr(addr), 
+       .result0(result0), .result1(result1), .result2(result2),
        .cs(cs), .sclk(sclk), .din(din), .dout(dout));
 
     // This is here to let us look at a python variable from the

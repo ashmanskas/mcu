@@ -40,6 +40,15 @@ class Tester:
         """shortcut for await ClockCycles(self.dut.clk, ...)"""
         await cocotb.triggers.ClockCycles(self.dut.clk, nclk, rising=rising)
 
+    async def wait_resp_ena(self):
+        """wait for next update of 'result'"""
+        while self.dut.ra.result_ena.value.integer == 1:
+            await self.wclk()
+        while self.dut.ra.result_ena.value.integer == 0:
+            await self.wclk()
+        while self.dut.ra.result_ena.value.integer == 1:
+            await self.wclk()
+        
     async def adt7320_emulator(self):
         """emulate one ADT7320 chip"""
         IDLE = 0
@@ -62,7 +71,7 @@ class Tester:
             await self.wclk()  # This loop executes once per clk cycle
             if o.state==IDLE:
                 ra.dout <= 1
-                if ra.cs.value.integer == 0:
+                if ra.cs.value.integer != 7:
                     o.state = CMD
                     o.count = 0
                     o.cmd = 0
@@ -92,7 +101,7 @@ class Tester:
                     o.state = RESP
                 elif r_wbar and addr==2:
                     # temperature
-                    o.respout = 0x1234
+                    o.respout = 0x4230 | (ra.cs.value.integer ^ 7)
                     o.state = RESP
                 elif r_wbar and addr==3:
                     # id
@@ -133,14 +142,21 @@ class Tester:
         await self.wclk()
         dut.reset <= 1
         await self.wclk(1000)
-        dut.addr <= 3
+        dut.addr <= 3  # read the ID register
         dut.reset <= 0
         await self.wclk(10)
 
         # Instantiate emulated ADT7320 chip
         self.adt7320 = cocotb.fork(self.adt7320_emulator())
 
-        await self.wclk(30000)
+        for _ in range(5):
+            await self.wait_resp_ena()
+
+        dut.addr <= 2  # read the temperature register
+        for _ in range(5):
+            await self.wait_resp_ena()
+
+        await self.wclk(1000)
         
         # Now kill off the coroutines we forked earlier
         self.adt7320.kill()

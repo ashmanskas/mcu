@@ -11,19 +11,23 @@
 
 module read_adt7320
   (
-   input  wire        clk,     // 100 MHz system-wide master clock
-   input  wire        reset,   // logic reset (may not be needed?)
-   input  wire [2:0]  addr,    // address bits in ADT7320 command byte
-   output reg  [15:0] result,  // data read back from 7320
-   output reg         cs,      // chip-select* wire to 7320
-   output reg         sclk,    // serial clock to 7320
-   output reg         din,     // serial data to 7320
-   input  wire        dout     // serial data read back from 7320
+   input  wire        clk,      // 100 MHz system-wide master clock
+   input  wire        reset,    // logic reset (may not be needed?)
+   input  wire [2:0]  addr,     // address bits in ADT7320 command byte
+   output reg  [15:0] result0,  // data read back from 7320
+   output reg  [15:0] result1,  // data read back from 7320
+   output reg  [15:0] result2,  // data read back from 7320
+   output reg  [2:0]  cs,       // chip-select* wire to 7320
+   output reg         sclk,     // serial clock to 7320
+   output reg         din,      // serial data to 7320
+   input  wire        dout      // serial data read back from 7320
    );
     // Set power-up values for 'reg' outputs
     initial begin
-        result = 0;
-        cs = 1;
+        result0 = 0;
+        result1 = 0;
+        result2 = 0;
+        cs = 3'b111;
         sclk = 1;
         din = 1;
     end
@@ -41,6 +45,8 @@ module read_adt7320
         end
         tick_1MHz_d1 <= tick_1MHz;
     end
+    // Cycle between three 7320 chips
+    reg [1:0] whichchip = 0;
     // Finite State Machine to issue commands and collect responses
     localparam
       START=0,    SELECT=1, COMMAND=2,  CMD1=3,
@@ -52,6 +58,8 @@ module read_adt7320
     reg [7:0] cmdbyte = 0;  // ff
     reg [7:0] cmdbyte_d;  // comb
     reg cmdbyte_ena;  // comb
+    // Update 'whichchip' counter
+    reg whichchip_inc;  // comb
     // CS, DIN, and SCLK serial inputs to the 7320
     reg cs_d, cs_ena;  // comb
     reg din_d, din_ena;  // comb
@@ -69,15 +77,35 @@ module read_adt7320
     always @ (posedge clk) begin
         if (reset) begin
             fsm <= START;
+            whichchip <= 0;
         end else if (tick_1MHz) begin
             fsm <= fsm_d;
+            if (whichchip_inc) begin
+                if (whichchip==2) begin
+                    whichchip = 0;
+                end else begin
+                    whichchip <= whichchip + 1;
+                end
+            end
         end
         if (tick_1MHz_d1) begin
             if (cmdbyte_ena) begin
                 cmdbyte <= cmdbyte_d;
             end
             if (cs_ena) begin
-                cs <= cs_d;
+                if (whichchip==0) begin
+                    cs[0] <= cs_d;
+                    cs[2:1] <= 2'b11;
+                end else if (whichchip==1) begin
+                    cs[0] <= 1;
+                    cs[1] <= cs_d;
+                    cs[2] <= 1;
+                end else if (whichchip==2) begin
+                    cs[2] <= cs_d;
+                    cs[1:0] <= 2'b11;
+                end else begin
+                    cs[2:0] <= 3'b111;
+                end
             end
             if (din_ena) begin
                 din <= din_d;
@@ -94,7 +122,15 @@ module read_adt7320
                 resp <= resp_d;
             end
             if (result_ena) begin
-                result <= resp;
+                if (whichchip==0) begin
+                    result0 <= resp;
+                end
+                if (whichchip==1) begin
+                    result1 <= resp;
+                end
+                if (whichchip==2) begin
+                    result2 <= resp;
+                end
             end
         end
     end
@@ -113,6 +149,7 @@ module read_adt7320
         resp_d = 0;
         resp_ena = 0;
         result_ena = 0;
+        whichchip_inc = 0;
         case (fsm)
             START:
               begin
@@ -164,6 +201,8 @@ module read_adt7320
                   count_inc = 1;
                   sclk_d = 0;
                   sclk_ena = 1;
+                  din_d = 1;
+                  din_ena = 1;
                   fsm_d = RESP1;
               end
             RESP1:
@@ -189,6 +228,7 @@ module read_adt7320
               begin
                   count_inc = 1;
                   if (count == 48) begin
+                      whichchip_inc = 1;
                       fsm_d = START;
                   end else begin
                       fsm_d = PAUSE;

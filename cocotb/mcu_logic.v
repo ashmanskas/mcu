@@ -45,6 +45,8 @@ module mcu_logic
     breg #(16'h0003,4) r0003(ibus, obus, testpatt);
     wire [15:0] do_testpatt;
     breg #(16'h0004) r0004(ibus, obus, do_testpatt);
+    wire [15:0] diffmax;
+    breg #(16'h0005) r0005(ibus, obus, diffmax);
     // Allow "bad idle" counts to be read out over bus
     wire [15:0] badidle_A1, badidle_A2, badidle_A3, badidle_A4;
     wire [15:0] badidle_B1, badidle_B2, badidle_B3, badidle_B4;
@@ -63,7 +65,8 @@ module mcu_logic
     wire pcA1, pcA2, pcA3, pcA4, pcB1, pcB2, pcB3, pcB4;
     wire ncA1, ncA2, ncA3, ncA4, ncB1, ncB2, ncB3, ncB4;
     wire [5:0] offsetA1, offsetB1;
-    coinc coinc(.clk(clk), .rst(rst), 
+    coinc coinc(.clk(clk), .rst(rst),
+                .diffmax(diffmax),
                 .singleA(sA1), .singleB(sB1),
                 .offsetA(offsetA1), .offsetB(offsetB1),
                 .pcoincA(pcA1), .ncoincA(ncA1), 
@@ -134,6 +137,7 @@ module coinc
    input  wire       singleB,  // single trigger from B side
    input  wire [5:0] offsetA,  // trig A offset w.r.t. clk edge
    input  wire [5:0] offsetB,  // trig B offset w.t.t. clk edge
+   input  wire [7:0] diffmax,  // maximum allowed coincidence time difference
    output reg        pcoincA,  // accept (prompt) to A, with proper latency
    output reg        ncoincA,  // reject to A side, with proper latency
    output reg        pcoincB,  // accept (prompt) to B, with proper latency
@@ -162,7 +166,6 @@ module coinc
     wire [7:0] diff2 = (oBd2 - 8'd32) - oAd1;
     wire [7:0] absdiff2 = diff2[7] ? -diff2 : diff2;
     reg [7:0] coincdiff = 0;  // temporary: record difference for coinc
-    reg [7:0] diffmax = 16;  // this will be programmable later
     always @ (posedge clk) begin
         srA[2:0] <= {srA[1:0], singleA};  // implement shift register
         srB[2:0] <= {srB[1:0], singleB};
