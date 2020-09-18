@@ -2,7 +2,10 @@
 
 // This code was written in 2013 by Ben Legeyt and has not yet been
 // tried. It is likely that we will need to make extensive
-// modifications to turn it into what we want.
+// modifications to turn it into what we want.  I (wja) made a few
+// edits to it on 2020-09-18 to make its output compatible with the
+// current 'rocstar_mcu_link' module; the original is in
+// github:ashmanskas/rocstar/xilinx/firmware/dynode_trigger.v
 
 module dynode_trigger 
   (

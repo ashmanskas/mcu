@@ -101,17 +101,22 @@ class Tester:
         self.adcdat_quiescent = 32  # what is this in real life?
 
         # Wait a while, then reset, then wait a while
+        dut.adcdat <= 0
         await self.wclk(20)
-        dut.adcdat <= self.adcdat_quiescent
         dut.reset <= 1
         await self.wclk(5)
         dut.reset <= 0
-        await self.wclk(5)
+        await self.wclk()
         await self.wr(0x0e00, 64, check=dt.energy_thresh_low, verbose=True)
         await self.wr(0x0e01, 192, check=dt.energy_thresh_high, verbose=True)
-        await self.wclk(10)
+        dut.adcdat <= self.adcdat_quiescent
+        await self.wclk(100)
         await self.send_pulse([60, 120, 80, 40])
-        await self.wclk(1000)
+        await self.wclk(30)
+        await self.send_pulse([35, 45, 35])
+        await self.wclk(30)
+        await self.send_pulse([50, 150, 120, 80])
+        await self.wclk(200)
 
 
         print("checks: {} ok, {} failed".format(
