@@ -51,8 +51,8 @@ module dynode_trigger
 	data_in_d <= data_in;
 	data_in_dd <= data_in_d;
 	increasing_d <= increasing;
-	over_thresh <= (data_in > energy_thresh_low) ? 1'b1 : 1'b0;
-	increasing <= (data_in >= data_in_d) ? 1'b1 : 1'b0;
+	over_thresh <= (data_in > energy_thresh_low);
+	increasing <= (data_in >= data_in_d);
 	// find local max and check that it is above threshold
 	// could squeeze one clock of latency out of this if necessary.
 	if ((increasing == 1'b0) && (increasing_d == 1'b1) && over_thresh_d) 
