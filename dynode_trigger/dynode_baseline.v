@@ -28,7 +28,7 @@ module dynode_baseline
 //   dynadcdly = 12, // sets number of clk cyc delays to integrations and bsleline 
    blstopdly= 3, // set the number of clk cyc to delay start of event hold  
    blstoptime= 5'b10111 , // number of clk cyc to hold baseline for event
-   blchangerate= 4'h0001  // baseline size of change per test
+   blchangerate= 16'h0001  // baseline size of change per test
    ;
    
     // delay ADC to baseline to allow event detection to stop 
@@ -127,7 +127,7 @@ module dynode_baseline
  	
  	newvalue <= ene4sum[0] +  ene4sum[1] +  ene4sum[2] +  ene4sum[3] ; // add 4 sums to make 16 point sum
  	
- 	if (reset == 1'b1 ) currentvalue <= 4'h0000 ;
+ 	if (reset == 1'b1 ) currentvalue <= 16'h0000 ;
 	else if ((currentvalue[15:4] < newvalue )& !eventpresent )// test if currentvalue needs adjustment
 			currentvalue <= currentvalue + blchangerate ;
 	else if ((currentvalue[15:4] > newvalue )& !eventpresent )
@@ -136,7 +136,7 @@ module dynode_baseline
 
 	if (	currentvalue[15:4] < {dyn_data_in, 4'b0000} )   //test to block under flow
 	dyn_blcor <= 	{ dyn_data_in, 4'b0000 } -  currentvalue[15:4] ;
-	else dyn_blcor <= 3'h000 ;
+	else dyn_blcor <= 12'h000 ;
 	
 	end
 	

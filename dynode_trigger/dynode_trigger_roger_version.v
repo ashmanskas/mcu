@@ -11,7 +11,7 @@ Rev.  00	10/15/2018	Compile with full ROCSTAR.v
 
 */
 	
-module dynode_trg 
+module dynode_trigger_roger
   (
    // dynode trigger I/O
    input  wire        clk,
@@ -53,9 +53,7 @@ module dynode_trg
 
    );
    
-   localparam
-   pileupdly= 4'h0011  // delay adc for time of pileup
-   ;
+    localparam pileupdly = 4'b0011;  // delay adc for time of pileup
    
   // control inputs set by breg register in the module ROCSTAR.v 
  //   bror #('h0002) r0002(ibus, obus, register);   // read register
@@ -150,7 +148,7 @@ dynode_eventdet dyned
    always @ (posedge clk) begin		 //send coin trigger time
  	if (dyn_event_sig == 1'b0 ) MCU_trigger_out <= 8'b11111111 ;
 	else if (dyn_event_sig == 1'b1 )begin
-		if  (evntim_sig[11:6] == 6'b111111 == evntim_sig[11:6]) MCU_trigger_out <= 2'hF8 ;
+		if  (evntim_sig[11:6] == 6'b111111 == evntim_sig[11:6]) MCU_trigger_out <= 8'hF8 ;
 		else MCU_trigger_out <= evntim_sig[11:4] ; end
 	end
 

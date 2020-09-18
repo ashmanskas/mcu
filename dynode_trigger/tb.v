@@ -24,6 +24,62 @@ module tb;
     reg  [7:0]  adcdat=0;
     wire        single;
     wire [5:0]  offset;
+
+    wire [7:0] mcu_trigger_out;
+    wire event_trigger_out;
+    wire [23:0] event_time_out;
+    wire enecor_load;
+    wire [23:0] dyn_evntim;
+    wire [7:0] pulookup;
+    wire [11:0] dyn_enecor;
+
+    reg [7:0] timcnt=0;
+    reg [3:0] dynadcdly=0;
+    reg [1:0] selecttime=0;
+    reg [3:0] smoothpmt=0;
+    reg [11:0] integcntl=0;
+
+    wire [7:0] adc_delay;
+    wire [11:0] sum_integ;
+
+    reg [1:0] trigger_data_mode=0;
+    reg [3:0] integration_pipeline_len=0;
+    reg [4:0] data_pipeline_len=0;
+    reg [1:0] trigger_channel_select=0;
+
+    reg trigger=0;
+    reg trigger_data_fifo_ren=0;
+    wire [15:0] trigger_data_fifo_q;
+    wire trigger_data_fifo_ne;
+    wire trigger_data_fifo_full;
+
+    dynode_trigger_roger dtr
+      (.clk(clk), .reset(reset), .ibus(ibus), .obus(obus),
+       .data_in(adcdat),
+       .MCU_trigger_out(mcu_trigger_out),
+       .event_trigger_out(event_trigger_out),
+       .event_time_out(event_time_out),
+       .enecor_load(enecor_load),
+       .dyn_evntim(dyn_evntim),
+       .pulookup(pulookup),
+       .dyn_enecor(dyn_enecor),
+       .timcnt(timcnt),
+       .dynadcdly(dynadcdly),
+       .selecttime(selecttime),
+       .smoothpmt(smoothpmt),
+       .integcntl(integcntl),
+       .adc_delay(adc_delay),
+       .sum_integ(sum_integ),
+       .trigger_data_mode(trigger_data_mode),
+       .integration_pipeline_len(integration_pipeline_len),
+       .data_pipeline_len(data_pipeline_len),
+       .trigger_channel_select(trigger_channel_select),
+       .trigger(trigger),
+       .trigger_data_fifo_ren(trigger_data_fifo_ren),
+       .trigger_data_fifo_q(trigger_data_fifo_q),
+       .trigger_data_fifo_ne(trigger_data_fifo_ne),
+       .trigger_data_fifo_full(trigger_data_fifo_full));
+
     dynode_trigger dt
       (.clk(clk), .reset(reset), .ibus(ibus), .obus(obus),
        .data_in(adcdat), .single(single), .offset(offset));
@@ -104,5 +160,61 @@ module bregpl #( parameter MYADDR=0, W=16, PU=0 )
     // Let the outside world see the current contents of 'regdat'
     assign q = regdat;
 endmodule  // bregpl
+
+/*
+ * Single-clock 33-bit-wide FIFO, depth 2048 words
+ */
+module fifo33  #( parameter W=33 )
+  (
+   input wire          clk,
+   input wire	       rst,
+   input wire [W-1:0]  d,
+   input wire          wen,
+   input wire          ren,
+   output wire [W-1:0] q,
+   output wire         nempty,
+   output wire [15:0]  nwords,
+   output wire         nearlyfull
+   );
+
+    //register reset signal to reduce clock skew
+    reg rst_local = 1'b0;
+    always @ (posedge clk) rst_local <= rst;
+
+    reg [W-1:0] mem [2047:0];
+    integer i;
+    initial begin
+        for (i=0; i<2048; i=i+1) mem[i] = 0;
+    end
+    reg [10:0]  wptr = 0;
+    reg [10:0]  rptr = 0;
+    wire [10:0] nword = wptr-rptr;
+    reg 	nearlyfullreg = 0, veryfull = 0;
+    assign nempty = (nword!=0);
+    assign nwords = nword;
+    assign nearlyfull = nearlyfullreg;
+    reg [W-1:0] qreg = 0;
+    assign q = qreg;
+    always @ (posedge clk) begin
+	if(rst_local) begin
+	    wptr <= 11'b0;
+	    rptr <= 11'b0;
+	end else begin
+	    if (wen && !veryfull) begin
+		// On write-enable, write word to memory and increment pointer
+		mem[wptr] <= d;
+		wptr <= wptr + 1'd1;
+	    end
+	    if (ren && nempty) begin
+		qreg <= mem[rptr];
+		rptr <= rptr + 1'd1;
+	    end else if (ren) begin
+		qreg <= 1'd0;
+	    end
+	    nearlyfullreg <= (nword[10:8]==3'b111);
+	    veryfull <= (nword[10:2]==9'h1ff);
+	end
+    end
+endmodule // fifo33
 
 `default_nettype wire

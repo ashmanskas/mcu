@@ -117,7 +117,9 @@ class Tester:
         await self.wclk(30)
         await self.send_pulse([50, 150, 120, 80])
         await self.wclk(30)
-        await self.send_pulse([0, 0, 200, 0, 0])
+        await self.send_pulse([32, 32, 200, 32, 32])
+        await self.wclk(30)
+        await self.send_pulse([32, 32, 200, 200, 32, 32])
         await self.wclk(200)
 
 

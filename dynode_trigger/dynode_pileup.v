@@ -36,8 +36,6 @@ module dynode_pileup
 
    );
 
-  	assign integcntcntl 	= integcntl[7:4] ;
- 	assign integphase 	= integcntl[11:8] ;   
 	// integcntl first hex word 	// all 0 pass all events, bit 0 =1 only full integration
 										// bit 1 =1 pass only samples = integcntl[7:4]
 										// bit 2 =1 pass only phase = integcntl[11:8]
@@ -45,6 +43,8 @@ module dynode_pileup
 										// bit 3 =1 do not correct event
 	wire [3:0] integcntcntl ;	// set number of event samples to pass 
 	wire [3:0] integphase ; 	// set the event phase to pass
+  	assign integcntcntl 	= integcntl[7:4] ;
+ 	assign integphase 	= integcntl[11:8] ;   
 
   
 
@@ -59,11 +59,11 @@ module dynode_pileup
     always @ (posedge clk) begin
 	
 	if ( reset == 1'b1 )begin
-		energy <= 3'h000 ;		
-		evnttim <= 5'h00000 ;	
-		pulokup <= 2'h00 ;	
-		enecor	 <= 3'h000 ;	
-		ingcnt <= 1'h0 ; end
+		energy <= 12'h000 ;		
+		evnttim <= 20'h00000 ;	
+		pulokup <= 8'h00 ;	
+		enecor	 <= 12'h000 ;	
+		ingcnt <= 4'h0 ; end
 	else if ((ene_load == 1'b1 )& ( smpu == spu0 )) begin
 		energy <= dyn_energy ;		
 		evnttim <= evntim ;		
@@ -75,8 +75,8 @@ module dynode_pileup
 		else enecor <= energy ;
 	end
 
-	assign pulokupw  =  pulokup ;
 	wire [7:0] pulokupw ;
+	assign pulokupw  =  pulokup ;
 	wire [15:0] pucorrw ;
 	reg [27:0] enetail ;		// corrected energy tail value 12 bits * 16 bits 12 bit fraction
 
