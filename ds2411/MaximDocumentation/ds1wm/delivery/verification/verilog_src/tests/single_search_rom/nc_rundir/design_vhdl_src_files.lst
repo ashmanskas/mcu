@@ -1,0 +1,5 @@
+../../../../../design/vhdl_src/ds1wm/one_wire_io.vhd
+../../../../../design/vhdl_src/ds1wm/clk_prescaler.vhd
+../../../../../design/vhdl_src/ds1wm/one_wire_interface.vhd
+../../../../../design/vhdl_src/ds1wm/onewiremaster.vhd
+../../../../../design/vhdl_src/ds1wm/ds1wm.vhd

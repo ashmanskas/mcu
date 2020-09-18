@@ -1,0 +1,24 @@
+This testcase performs scratchpad memory tests to the slave device.
+
+The nc_rundir contains a run script to perform logic simulation using the
+Cadence ncsim tool.
+
+USAGE
+-----
+
+% cd nc_rundir
+
+Edit the "include" line in the cds.lib file to refer to your IUS (ncsim) installation directory.
+
+Change:
+
+   include /engtools/eval/cadence/ius620_lnx86/tools/inca/files/cds.lib
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+	              IUS_INST_DIR
+
+
+Edit the run.csh to use the verilog or vhdl core.  See file for details.		      
+		      		         
+% ./run.csh 
+
+   Run logs will be created in the logs ./logs directory

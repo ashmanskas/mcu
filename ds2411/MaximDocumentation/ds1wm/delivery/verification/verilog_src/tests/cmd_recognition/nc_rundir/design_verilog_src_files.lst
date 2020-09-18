@@ -1,0 +1,5 @@
+../../../../../design/verilog_src/ds1wm/one_wire_io.v
+../../../../../design/verilog_src/ds1wm/clk_prescaler.v
+../../../../../design/verilog_src/ds1wm/one_wire_interface.v
+../../../../../design/verilog_src/ds1wm/onewiremaster.v
+../../../../../design/verilog_src/ds1wm/ds1wm.v

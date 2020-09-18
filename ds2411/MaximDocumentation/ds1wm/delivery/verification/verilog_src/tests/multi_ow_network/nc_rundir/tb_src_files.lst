@@ -1,0 +1,9 @@
+../../../testbench/tb_ds1wm/tb_ds1wm.v
+../../../testbench/tb_ds1wm/tc_ds1wm.v
+../../../testbench/scoreboard/scoreboard.v
+../../../testbench/clkgen/clkgen.v
+../../../testbench/cpu_bfm/cpu_bfm.v
+../../../testbench/ow_slave/ow_slave.v
+../../../testbench/ow_slave/iox.v
+../../../testbench/ow_slave/cmd_ctrl.v
+
