@@ -40,7 +40,57 @@ class Tester:
         """shortcut for await ClockCycles(self.dut.clk, ...)"""
         await cocotb.triggers.ClockCycles(self.dut.clk, nclk, rising=rising)
 
-                
+    async def wr(self, addr, data, check=None, verbose=None):
+        """write 'addr' := 'data' on register-file bus"""
+        dut = self.dut
+        if verbose is None: verbose = self.verbose
+        await self.wclk()
+        dut.baddr <= addr
+        dut.bwrdata <= data
+        dut.bwr <= 1
+        dut.bstrobe <= 1
+        await self.wclk()
+        dut.baddr <= 0
+        dut.bwrdata <= 0
+        dut.bwr <= 0
+        dut.bstrobe <= 0
+        await self.wclk()
+        if verbose:
+            print("wr {:04x} := {:04x}".format(addr, data))
+        if check is not None:
+            self.check(check.value.integer == data)
+
+    async def rd(self, addr, check=None, verbose=None):
+        """read from regsiter-file bus at address 'addr'"""
+        dut = self.dut
+        if verbose is None: verbose = self.verbose
+        await self.wclk()
+        dut.baddr <= addr
+        dut.bwr <= 0
+        dut.bstrobe <= 0
+        await self.wclk()
+        dut.bstrobe <= 1
+        await self.wclk()
+        data = dut.brddata.value.integer
+        dut.bstrobe <= 0
+        dut.baddr <= 0
+        await self.wclk()
+        if verbose:
+            print("rd {:04x} -> {:04x}".format(addr, data))
+        if check is not None:
+            self.check(data == check)
+        return data
+
+    async def send_pulse(self, data):
+        """put list of samples in data[] onto 'adcdat'"""
+        assert type(data)==list
+        dut = self.dut
+        for d in data:
+            await self.wclk()
+            dut.adcdat <= d
+        await self.wclk()
+        dut.adcdat <= self.adcdat_quiescent
+    
     async def run_test1(self):
         """initial very simple test of dynode_trigger module"""
         dut = self.dut
@@ -48,14 +98,19 @@ class Tester:
         # even though from our perspective the actual D.U.T. is the
         # 'read_adt7320' module instantiated therein.
         dt = dut.dt
+        self.adcdat_quiescent = 32  # what is this in real life?
 
         # Wait a while, then reset, then wait a while
         await self.wclk(20)
+        dut.adcdat <= self.adcdat_quiescent
         dut.reset <= 1
-        await self.wclk()
+        await self.wclk(5)
         dut.reset <= 0
-        await self.wclk()
-        dut.reset <= 1
+        await self.wclk(5)
+        await self.wr(0x0e00, 64, check=dt.energy_thresh_low, verbose=True)
+        await self.wr(0x0e01, 192, check=dt.energy_thresh_high, verbose=True)
+        await self.wclk(10)
+        await self.send_pulse([60, 120, 80, 40])
         await self.wclk(1000)
 
 

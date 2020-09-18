@@ -158,6 +158,13 @@ module dynode_trigger
 	if (rst_local) begin
 	    single <= 0;
             offset <= 0;
+        end else if (timing_latch_counter[5]) begin
+            // Ben's shift-register tells us that we got a trigger
+            single <= 1;
+            // To my surprise, it looks as if Ben's algorithm does not
+            // produce a signed value, so I will keep the sign bit at
+            // zero for now
+            offset <= {1'b0,timing_value[7:2]};
 	end else begin
 	    single <= 0;  // fill in value here
             offset <= 0;  // fill in value here

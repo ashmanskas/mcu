@@ -14,6 +14,7 @@ module tb;
     // Group together 'ibus' and 'obus' signals for internal
     // register-file 'bus' interface
     reg         bwr=0;
+    reg         bstrobe=0;  // currently unused
     reg  [15:0] baddr=0, bwrdata=0;
     wire [15:0] brddata;
     wire [33:0] ibus = {clk, bwr, baddr, bwrdata};
