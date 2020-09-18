@@ -116,6 +116,8 @@ class Tester:
         await self.send_pulse([35, 45, 35])
         await self.wclk(30)
         await self.send_pulse([50, 150, 120, 80])
+        await self.wclk(30)
+        await self.send_pulse([0, 0, 200, 0, 0])
         await self.wclk(200)
 
 
