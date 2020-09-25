@@ -1,3 +1,5 @@
+`default_nettype none
+
 /* This is a module used in the file ROCSTAR.v the top of the project
 	It calculates the event start time from the dynode ADC signals for coincident
 	testing and calculates the event energy for windowing.
@@ -493,5 +495,4 @@ IODELAY2 #(.IDELAY_VALUE(0), .IDELAY_TYPE("VARIABLE_FROM_ZERO"),
     assign out_valid = aligned;
 endmodule
 
-
-
+`default_nettype wire

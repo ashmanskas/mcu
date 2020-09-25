@@ -1,3 +1,5 @@
+`default_nettype none
+
 /* This is a module used in the file dynode_trg.v which is under the project ROCSTAR
 	It detects and determines the start time of an event at the dynode signals for
 	coincident testing..
@@ -425,3 +427,6 @@ end
     end
     
 endmodule
+
+`default_nettype wire
+

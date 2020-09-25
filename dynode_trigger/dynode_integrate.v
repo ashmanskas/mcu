@@ -1,3 +1,5 @@
+`default_nettype none
+
 /* This is a module used in the file dynode_trg.v which is under the project ROCSTAR
 	It calculates the energy of an event at the dynode signals for event windowing.
 	the number if intrgration samples is adjustable from 1 to 15
@@ -337,3 +339,5 @@ module dynode_integrate
 
   
 endmodule
+
+`default_nettype wire

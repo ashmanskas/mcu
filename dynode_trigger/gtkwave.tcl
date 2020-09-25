@@ -9,6 +9,51 @@ for {set i 0} {$i < $nfacs} {incr i} {
 }
 close $fp
 set siglist {
+    tb.dtr.timcnt
+    tb.dtr.dynadcdly
+    tb.dtr.selecttime
+    tb.dtr.smoothpmt
+    tb.dtr.integcntl
+    
+    tb.dtr.data_in
+    tb.dtr.MCU_trigger_out
+    tb.dtr.event_trigger_out
+    tb.dtr.event_time_out
+    tb.dtr.enecor_load
+    tb.dtr.dyn_evntim
+    tb.dtr.pulookup
+    tb.dtr.dyn_enecor
+    tb.dtr.adc_delay
+    tb.dtr.sum_integ
+
+    tb.dtr.dyn_indet_sig
+    tb.dtr.dyn_event_sig
+    tb.dtr.dyn_pileup_sig
+    tb.dtr.dyn_data_in_sig
+    tb.dtr.dyn_blcor_sig
+    tb.dtr.dyn_adcdly_sig
+    tb.dtr.dyn_curval_sig
+    tb.dtr.evntim_sig
+    tb.dtr.dyn_pudump_sig
+    tb.dtr.dyn_energy_sig
+    tb.dtr.dyn_ingcnt_sig
+    tb.dtr.ene_load_sig
+    tb.dtr.dyn_evntim_sig
+    tb.dtr.enecor_load_sig
+    tb.dtr.dynadc_dly_sig
+
+    tb.dtr.dynbl.stopbl
+    tb.dtr.dynbl.eventpresent
+    tb.dtr.dynbl.currentvalue
+    tb.dtr.dynbl.enesum
+    tb.dtr.dynbl.ene4sum[0]
+    tb.dtr.dynbl.ene4sum[1]
+    tb.dtr.dynbl.ene4sum[2]
+    tb.dtr.dynbl.ene4sum[3]
+    tb.dtr.dynbl.newvalue
+    tb.dtr.dynbl.dyn_blcor
+    tb.dtr.dynbl.dyn_blcor[11:4]
+
     tb.pycount
     tb.baddr
     tb.bwr
