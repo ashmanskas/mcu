@@ -103,6 +103,9 @@ class Tester:
         dt = dut.dt
         self.adcdat_quiescent = 32  # what is this in real life?
 
+        dut.selecttime <= 0
+        dut.smoothpmt <= 3
+
         # Wait a while, then reset, then wait a while
         dut.adcdat <= 0
         dut.adcdat <= self.adcdat_quiescent
