@@ -53,6 +53,8 @@ module tb;
     wire trigger_data_fifo_ne;
     wire trigger_data_fifo_full;
 
+    always @ (posedge clk) timcnt <= timcnt + 1;
+
     dynode_trigger_roger dtr
       (.clk(clk), .reset(reset), .ibus(ibus), .obus(obus),
        .data_in(adcdat),

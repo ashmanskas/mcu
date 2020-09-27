@@ -1,3 +1,15 @@
+/*
+ *
+ * 2020-09-25: srilalan points out that we can probably just use
+ * running sum of N samples (e.g. N=6 or 7) with lower and
+ * upper threshold for deciding whether we have an event
+ *
+ */
+
+
+
+`default_nettype none
+
 /* This is a module used in the file ROCSTAR.v the top of the project
 	It calculates the event start time from the dynode ADC signals for coincident
 	testing and calculates the event energy for windowing.
@@ -493,5 +505,4 @@ IODELAY2 #(.IDELAY_VALUE(0), .IDELAY_TYPE("VARIABLE_FROM_ZERO"),
     assign out_valid = aligned;
 endmodule
 
-
-
+`default_nettype wire

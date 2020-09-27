@@ -1,0 +1,20 @@
+This delivery package contains synthesizable VHDL RTL for the DS1WM block.
+The RTL is located under design/vhdl_src/ds1wm.
+
+This delivery package contains synthesizable Verilog RTL for the DS1WM block.
+The RTL is located under design/verilog_src/ds1wm.
+
+The testbench is implemented in verilog. This is located under;
+   verification/verilog_src/testbench
+
+There are testcases that demonstrates a single search rom, multiple one wire network with search rom, scratch pad integrity and an exhaustive command recognition testcases.  These testcases are located:
+   verification/verilog_src/tests/single_search_rom
+   verification/verilog_src/tests/multi_ow_network
+   verification/verilog_src/tests/scratchpad_integrity
+   verification/verilog_src/tests/cmd_recognition
+   
+      
+Each testcase comes with a run script for users that have ncsim installed.
+For usage instructions, please see the README file in the test directory.
+ 
+Release notes and a datasheet can be found in the "doc" directory. 

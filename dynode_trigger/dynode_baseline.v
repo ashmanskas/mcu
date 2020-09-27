@@ -1,3 +1,5 @@
+`default_nettype none
+
 /* This is a module used in the file dynode_trg.v which is under the project ROCSTAR
 	It calculates the baseline of the dynode ADC signals for
 	event detection and energy integration. Correction is to a fraction of an LSB.
@@ -58,19 +60,26 @@ module dynode_baseline
     // register and signals
 	reg [11:0] ene16sum[3:0];
 	reg [9:0] ene4sum[3:0];
-	reg [9:0] enesum;
-    reg [11:0] newvalue;
-    reg [15:0] currentvalue;
-    reg eventpresent;
-    reg [4:0] holdcnt ;
-    reg stopbl ;
-	reg indet_d ;
-	reg event_d ;
-	reg pileup_d ;
-	reg pudump_d ;
-	reg [3:0] sample ;
-    reg stopdly [15:0];
-    reg  stopdlylast ;
+	reg [9:0] enesum = 0;
+    reg [11:0] newvalue = 0;
+    reg [15:0] currentvalue = 0;
+    reg eventpresent = 0;
+    reg [4:0] holdcnt = 0;
+    reg stopbl = 0;
+	reg indet_d = 0;
+	reg event_d = 0;
+	reg pileup_d = 0;
+	reg pudump_d = 0;
+	reg [3:0] sample = 0;
+    reg [15:0] stopdly  = 0;
+    reg  stopdlylast = 0;
+
+    initial begin
+        ene4sum[0] = 0;
+        ene4sum[1] = 0;
+        ene4sum[2] = 0;
+        ene4sum[3] = 0;
+    end
 	
   always @ (posedge clk) begin
  	
@@ -149,3 +158,5 @@ module dynode_baseline
    end
 
 endmodule
+
+`default_nettype wire

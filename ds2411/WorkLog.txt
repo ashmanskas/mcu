@@ -1,0 +1,15 @@
+ALL TIMESTAMPS IN ZULU
+
+Start Time ; Date / End Time / Description / Comments
+
+
+18:00 ; Sep 11 2020 / 21:50 / Initial brief, GitHub repo setup, little bit of research / Ignore this one!
+09:58 ; Sep 12 2020 / 11:01 / Figured out how the 1-Wire tech works, begin to explore chip, wrote code skeleton / Next steps?
+13:13 ; Sep 12 2020 / 14:21 / Started work on read_ds2411.v / -----
+17:00 ; Sep 12 2020 / 18:23 / Started compiling Maxim documentation, continued work on read_ds2411.v / Found verilog code I expect will be helpful
+20:00 ; Sep 13 2020 / 21:05 / Zoom call with Mija and Sunny working on the git problem and our verilog codes, revised the verilog code / Ditch the inout wire
+14:00 ; Sep 14 2020 / 14:50 / Examining the Maxim documentation looking for code to use as a guide in writing read_ds2411.v / onewiremaster.v seems like it might be particularly useful
+15:20 ; Sep 14 2020 / 16:40 / Continued examining the Maxim documentation and learning from the code / I think I can pretty much use the code by Maxim I found while digging around on their website, just a tiny bit of editing
+18:00 ; Sep 18 2020 / 21:07 / Friday afternoon meeting, working on dynode_trigger.v, working on read_ds2411.v / -----
+12:00 ; Sep 25 2020 / 13:00 / Understanding cocotb and writing testbench for onewiremaster.v / -----
+13:30 ; Sep 25 2020 / 15:40 / Continuing work from earlier in the day / -----

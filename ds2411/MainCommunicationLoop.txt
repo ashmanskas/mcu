@@ -1,0 +1,14 @@
+// Declare wires and regs
+// Start a clock
+
+// Issue transaction start sequence
+// Wait for response
+
+	// Issue ROM command sequence (8-bit)
+	// Wait for response
+
+	// Issue function command sequence (8-bit)
+	// Exchange data
+	// Repeat until done
+
+// Loop back to issuing the reset sequence

@@ -1,3 +1,5 @@
+`default_nettype none
+
 /* This is a module used in the file dynode_trg.v which is under the project ROCSTAR
 	It corrects the energy sum of the dynode ADC signals for
 	pileup and start phasen..
@@ -243,3 +245,6 @@ module pileup_lookup
 	endcase
     end
 endmodule
+
+`default_nettype wire
+

@@ -87,6 +87,9 @@ class Tester:
         dut = self.dut
         for d in data:
             await self.wclk()
+            d += self.adcdat_quiescent
+            if d < 0: d = 0
+            if d > 255: d = 255
             dut.adcdat <= d
         await self.wclk()
         dut.adcdat <= self.adcdat_quiescent
@@ -100,8 +103,12 @@ class Tester:
         dt = dut.dt
         self.adcdat_quiescent = 32  # what is this in real life?
 
+        dut.selecttime <= 0
+        dut.smoothpmt <= 3
+
         # Wait a while, then reset, then wait a while
         dut.adcdat <= 0
+        dut.adcdat <= self.adcdat_quiescent
         await self.wclk(20)
         dut.reset <= 1
         await self.wclk(5)
@@ -110,17 +117,17 @@ class Tester:
         await self.wr(0x0e00, 64, check=dt.energy_thresh_low, verbose=True)
         await self.wr(0x0e01, 192, check=dt.energy_thresh_high, verbose=True)
         dut.adcdat <= self.adcdat_quiescent
-        await self.wclk(100)
-        await self.send_pulse([60, 120, 80, 40])
-        await self.wclk(30)
-        await self.send_pulse([35, 45, 35])
-        await self.wclk(30)
-        await self.send_pulse([50, 150, 120, 80])
-        await self.wclk(30)
-        await self.send_pulse([32, 32, 200, 32, 32])
-        await self.wclk(30)
-        await self.send_pulse([32, 32, 200, 200, 32, 32])
+        # speed up settling time for baseline average
+        dut.dtr.dynbl.currentvalue <= 0x100 * self.adcdat_quiescent
+        await self.wclk(500)
+        await self.send_pulse([45, 140, 200, 210, 160, 90, 20])
         await self.wclk(200)
+        await self.send_pulse([35, 45, 35])
+        await self.wclk(200)
+        await self.send_pulse([45, 140, 200, 210, 160, 90, 20])
+        await self.wclk(200)
+        await self.send_pulse([45, 140, 200, 210, 160, 90, 20])
+        await self.wclk(500)
 
 
         print("checks: {} ok, {} failed".format(
