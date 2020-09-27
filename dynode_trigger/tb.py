@@ -162,11 +162,7 @@ class Tester:
         interpolatedPulse3 = numpy.interp(x, xp, pulse3)
 
         # Average out interpolated pulses
-        avgPulse = list(40)
-        for i in range(40):
-            pulseSampleSum = interpolatedPulse1[i] + interpolatedPulse2[i] + interpolatedPulse3[i]
-            avgPulse[i] = pulseSampleSum / 3
-
+        avgPulse = list((interpolatedPulse1 + interpolatedPulse2 + interpolatedPulse3) / 3)
 
         dut.selecttime <= 0
         dut.smoothpmt <= 3
@@ -186,17 +182,18 @@ class Tester:
         dut.dtr.dynbl.currentvalue <= 0x100 * self.adcdat_quiescent
 
         await self.wclk(500)
-        rms = 0.1 * numpy.sqrt(numpy.mean(avgPulse ** 2))
+        rms = 0.1 * numpy.sqrt(numpy.mean([value ** 2 for value in avgPulse]))
         maxOfAvgPulse = max(avgPulse)
-        for i in range(4):
+        for i in range(8):
             offset = numpy.random.randint(-2, 2)
             gaussFactor = numpy.random.normal(0, rms, 1) * numpy.random.randint(-1, 2)
-            sentPulse = list(8)
+            sentPulse = []
             for j in range(2, 40, 5):
-                sentPulse.append(avgPulse[j - offset] * (1 + (gaussFactor / maxOfAvgPulse)))
+                value = int(numpy.round(avgPulse[j - offset] * (1 + (gaussFactor / maxOfAvgPulse))))
+                sentPulse.append(value)
 
             await self.send_pulse(sentPulse)
-            await self.wclk(numpy.random.randint(50, 750))
+            await self.wclk(numpy.random.randint(50, 250))
 
 
 
