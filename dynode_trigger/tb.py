@@ -155,7 +155,7 @@ class Tester:
 
         # Interpolate data from pulses
         x = numpy.linspace(0, 7, 40)
-        xp = numpy.linspace(0, 8)
+        xp = numpy.linspace(0, 7, 8)
 
         interpolatedPulse1 = numpy.interp(x, xp, pulse1)
         interpolatedPulse2 = numpy.interp(x, xp, pulse2)
