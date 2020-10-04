@@ -23,7 +23,8 @@ module dynode_eventdet
    output reg 	        dyn_event,		//event detected
    output reg 	        dyn_pileup,		//pileup up event detected
    output reg 		dyn_pudump,		//fd to wide
-   output reg   [23:0]  evntim
+   output reg   [23:0]  evntim,
+   output reg   [7:0]   evnt_timsd_t     // temp output for scatter plot
    
 //   output for simulation
 // , output reg [14:0] fdo,
@@ -128,6 +129,8 @@ module dynode_eventdet
 		enesd_n <= enesd ;
 		enesd_p <= enesd_d ;
 		evnt_timsd <= timcnt ;
+	        evnt_timsd_t <= evnt_timsd;
+	   
 	end	
 	
 	end

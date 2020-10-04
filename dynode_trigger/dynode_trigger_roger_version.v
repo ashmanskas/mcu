@@ -25,43 +25,45 @@ Rev.  00	10/15/2018	Compile with full ROCSTAR.v
 	
 module dynode_trigger_roger
   (
+   output reg [7:0]  evnt_timsd_temp, // temp register for scatter plot
+   
    // dynode trigger I/O
-   input  wire        clk,
-   input  wire        reset,
-   input  wire [33:0] ibus,  //nu
-   output wire [15:0] obus,	//nu
-   input  wire [7:0]  data_in,
-   output reg  [7:0]  MCU_trigger_out,  //coin trigger with time
-   output wire  event_trigger_out,  //coin trigger
-   output wire  [23:0]  event_time_out,  //coin time
-   output wire  enecor_load,				// energy integrationcorrection  ready
-   output wire [23:0] dyn_evntim,   	// event start time for event correction
-   output wire [7:0] pulookup,  		 	// integ samples and phase
-   output wire  [11:0]  dyn_enecor, 	// energy integration value corrected
+   input wire 	      clk,
+   input wire 	      reset,
+   input wire [33:0]  ibus, //nu
+   output wire [15:0] obus, //nu
+   input wire [7:0]   data_in,
+   output reg [7:0]   MCU_trigger_out, //coin trigger with time
+   output wire 	      event_trigger_out, //coin trigger
+   output wire [23:0] event_time_out, //coin time
+   output wire 	      enecor_load, // energy integrationcorrection  ready
+   output wire [23:0] dyn_evntim, // event start time for event correction
+   output wire [7:0]  pulookup, // integ samples and phase
+   output wire [11:0] dyn_enecor, // energy integration value corrected
    
    // control inputs set by register if not in simulation
-   input  wire [7:0] timcnt,				//time counter   
-   input wire [3:0] dynadcdly, 		// sets number of clk cyc delays to integrations and bsleline 
-   input wire [1:0] selecttime,		// 0 = time from SD, 1 = time from cfd enetot 4 point, 2 = 1 pt
-   input wire [3:0] smoothpmt, 			// set number of points in smooth 1, 2, 3, or 4 
+   input wire [7:0]   timcnt, //time counter   
+   input wire [3:0]   dynadcdly, // sets number of clk cyc delays to integrations and bsleline 
+   input wire [1:0]   selecttime, // 0 = time from SD, 1 = time from cfd enetot 4 point, 2 = 1 pt
+   input wire [3:0]   smoothpmt, // set number of points in smooth 1, 2, 3, or 4 
  //  input wire [3:0] integcount,			// number of samples in a ful integration 
-   input wire [11:0] integcntl,   			// Controls filter on sample count and phase of events passed
+   input wire [11:0]  integcntl, // Controls filter on sample count and phase of events passed
   
    // outputs for simulatton test
-   output wire  [7:0]  adc_delay, 	// adc dlayed
-   output wire  [11:0]  sum_integ, 	// integ sum
+   output wire [7:0]  adc_delay, // adc dlayed
+   output wire [11:0] sum_integ, // integ sum
 
    // dynode data I/O
-   input  wire [1:0]  trigger_data_mode,			// sets the number and type of data worde to load to fifo
-   input  wire [3:0]  integration_pipeline_len, // sets the number of samples in the integration 
-   input  wire [4:0]  data_pipeline_len,			// sets the delay to the ADC data loaded to the FIFO
-   input  wire [1:0]  trigger_channel_select,
+   input wire [1:0]   trigger_data_mode, // sets the number and type of data worde to load to fifo
+   input wire [3:0]   integration_pipeline_len, // sets the number of samples in the integration 
+   input wire [4:0]   data_pipeline_len, // sets the delay to the ADC data loaded to the FIFO
+   input wire [1:0]   trigger_channel_select,
  //  input  wire [7:0]  trigger_channel_mux,
-   input  wire        trigger,
-   input  wire        trigger_data_fifo_ren,
+   input wire 	      trigger,
+   input wire 	      trigger_data_fifo_ren,
    output wire [15:0] trigger_data_fifo_q,
-   output wire        trigger_data_fifo_ne,
-   output wire        trigger_data_fifo_full
+   output wire 	      trigger_data_fifo_ne,
+   output wire 	      trigger_data_fifo_full
 
    );
    
@@ -154,7 +156,8 @@ dynode_eventdet dyned
 	.dyn_event(dyn_event_sig) ,	// output  dyn_event_sig
 	.dyn_pileup(dyn_pileup_sig) ,	// output  dyn_pileup_sig
 	.dyn_pudump(dyn_pudump_sig) ,	// output  dyn_pudump_sig
-	.evntim(evntim_sig) 	// output [23:0] evntim_sig
+	.evntim(evntim_sig), 	// output [23:0] evntim_sig
+        .evnt_timsd_t(evnt_timsd_temp) // temp output for scatter plot
 );
 
    always @ (posedge clk) begin		 //send coin trigger time

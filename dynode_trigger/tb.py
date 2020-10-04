@@ -4,6 +4,7 @@ import inspect
 import os
 import numpy
 import random
+import matplotlib.pyplot
 
 from collections import deque
 from types import SimpleNamespace
@@ -181,10 +182,14 @@ class Tester:
         # speed up settling time for baseline average
         dut.dtr.dynbl.currentvalue <= 0x100 * self.adcdat_quiescent
 
+        # Instantiate arrays for plot
+        actual_eventtime = list()
+        calculated_eventtime = list()
+
         await self.wclk(500)
         rms = 0.1 * numpy.sqrt(numpy.mean([value ** 2 for value in avgPulse]))
         maxOfAvgPulse = max(avgPulse)
-        for i in range(8):
+        for i in range(250):
             offset = numpy.random.randint(-2, 2)
             gaussFactor = numpy.random.normal(0, rms, 1) * numpy.random.randint(-1, 2)
             sentPulse = []
@@ -192,9 +197,14 @@ class Tester:
                 value = int(numpy.round(avgPulse[j - offset] * (1 + (gaussFactor / maxOfAvgPulse))))
                 sentPulse.append(value)
 
+            actual_eventtime.append(int(str(dut.timcnt), 2))
             await self.send_pulse(sentPulse)
-            await self.wclk(numpy.random.randint(50, 250))
-
+            await self.wclk(100)
+            calculated_eventtime.append(int(str(dut.evnt_timsd_temp), 2))
+            
+        if (len(actual_eventtime) == 250):
+            matplotlib.pyplot.scatter(actual_eventtime, calculated_eventtime)
+            matplotlib.pyplot.savefig("TimeCountvsEventTimSD.pdf")
 
 
         print("checks: {} ok, {} failed".format(
@@ -208,5 +218,4 @@ class Tester:
 async def tests(dut):
     """instantiate Tester class then run its test(s)"""
     tester = Tester(dut)
-    await tester.run_test1()
     await tester.run_test2()

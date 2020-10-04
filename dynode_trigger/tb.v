@@ -53,6 +53,9 @@ module tb;
     wire trigger_data_fifo_ne;
     wire trigger_data_fifo_full;
 
+   reg [7:0] evnt_timsd_temp;
+   
+
     always @ (posedge clk) timcnt <= timcnt + 1;
 
     dynode_trigger_roger dtr
@@ -80,7 +83,8 @@ module tb;
        .trigger_data_fifo_ren(trigger_data_fifo_ren),
        .trigger_data_fifo_q(trigger_data_fifo_q),
        .trigger_data_fifo_ne(trigger_data_fifo_ne),
-       .trigger_data_fifo_full(trigger_data_fifo_full));
+       .trigger_data_fifo_full(trigger_data_fifo_full),
+       .evnt_timsd_temp(evnt_timsd_temp));
 
     dynode_trigger dt
       (.clk(clk), .reset(reset), .ibus(ibus), .obus(obus),
