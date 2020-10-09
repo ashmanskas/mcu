@@ -155,7 +155,7 @@ class Tester:
                       211.290816326531, 173.734693877551, 100.732142857143, 30.0420918367347]
 
         # Interpolate data from pulses
-        x = numpy.linspace(0, 7, 40)
+        x = numpy.linspace(0, 7, 800)
         xp = numpy.linspace(0, 7, 8)
 
         interpolatedPulse1 = numpy.interp(x, xp, pulse1)
@@ -182,29 +182,58 @@ class Tester:
         # speed up settling time for baseline average
         dut.dtr.dynbl.currentvalue <= 0x100 * self.adcdat_quiescent
 
-        # Instantiate arrays for plot
+        # Instantiate arrays for plots
         actual_eventtime = list()
         calculated_eventtime = list()
+        actual_v_calculated_eventtime_diff = list()
+        actual_fraction = list()
+        calculated_fraction = list()
 
+        num_list = list()
+        for i in range(0, 250):
+            num_list.append(i)
+
+        ## ToDo: provide comments for this section
         await self.wclk(500)
         rms = 0.1 * numpy.sqrt(numpy.mean([value ** 2 for value in avgPulse]))
         maxOfAvgPulse = max(avgPulse)
         for i in range(250):
-            offset = numpy.random.randint(-2, 2)
+            offset = numpy.random.randint(-50, 50)
             gaussFactor = numpy.random.normal(0, rms, 1) * numpy.random.randint(-1, 2)
             sentPulse = []
-            for j in range(2, 40, 5):
-                value = int(numpy.round(avgPulse[j - offset] * (1 + (gaussFactor / maxOfAvgPulse))))
+            for j in range(50, 800, 100):
+                value = int(numpy.round(avgPulse[j + offset] * (1 + (gaussFactor / maxOfAvgPulse))))
                 sentPulse.append(value)
 
-            actual_eventtime.append(int(str(dut.timcnt), 2))
+
+            current_actual_eventtime = int(str(dut.timcnt), 2)
+            actual_eventtime.append(current_actual_eventtime)
             await self.send_pulse(sentPulse)
             await self.wclk(100)
-            calculated_eventtime.append(int(str(dut.evnt_timsd_temp), 2))
+            current_calculated_eventtime = int(str(dut.evnt_timsd_temp), 2)
+            calculated_eventtime.append(current_calculated_eventtime)
+            
+            current_difference = abs(current_actual_eventtime - current_calculated_eventtime)
+            if current_difference > 100:
+                actual_v_calculated_eventtime_diff.append(abs(current_difference - 255))
+            else:
+                actual_v_calculated_eventtime_diff.append(current_difference)
+
+            ## actual_fraction.append((offset + 50) / 100)
+            ## calculated_fraction.append(dut.event_time_out[11:0])
+
             
         if (len(actual_eventtime) == 250):
             matplotlib.pyplot.scatter(actual_eventtime, calculated_eventtime)
             matplotlib.pyplot.savefig("TimeCountvsEventTimSD.pdf")
+            matplotlib.pyplot.clf()
+
+            matplotlib.pyplot.scatter(num_list, actual_v_calculated_eventtime_diff)
+            matplotlib.pyplot.savefig("DifferenceInActualAndCalculatedEventtime.pdf")
+            matplotlib.pyplot.clf()
+            
+            ## matplotlib.pyplot.scatter(actual_fraction, calculated_fraction)
+            ## matplotlib.pyplot.savefig("ActualFractionvsCalculatedFraction.pdf")
 
 
         print("checks: {} ok, {} failed".format(
