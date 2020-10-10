@@ -219,8 +219,8 @@ class Tester:
             else:
                 actual_v_calculated_eventtime_diff.append(current_difference)
 
-            ## actual_fraction.append((offset + 50) / 100)
-            ## calculated_fraction.append(dut.event_time_out[11:0])
+            actual_fraction.append((offset + 50) / 100)
+            calculated_fraction.append(int(str(dut.sd_timfraco),2))
 
             
         if (len(actual_eventtime) == 250):
@@ -231,9 +231,9 @@ class Tester:
             matplotlib.pyplot.scatter(num_list, actual_v_calculated_eventtime_diff)
             matplotlib.pyplot.savefig("DifferenceInActualAndCalculatedEventtime.pdf")
             matplotlib.pyplot.clf()
-            
-            ## matplotlib.pyplot.scatter(actual_fraction, calculated_fraction)
-            ## matplotlib.pyplot.savefig("ActualFractionvsCalculatedFraction.pdf")
+
+            matplotlib.pyplot.scatter(actual_fraction, calculated_fraction)
+            matplotlib.pyplot.savefig("ActualFractionvsCalculatedFraction.pdf")
 
 
         print("checks: {} ok, {} failed".format(
