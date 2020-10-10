@@ -305,9 +305,20 @@ class Tester:
             matplotlib.pyplot.scatter(num_list, event_time_difference_list)
             matplotlib.pyplot.savefig("DifferenceInActualAndCalculatedProperTime(num vs 10ns).pdf")
             matplotlib.pylab.clf()
-
-            matplotlib.pyplot.hist(event_time_difference_list, 50, range=(-12, -7))
+            
+            matplotlib.pyplot.hist(event_time_difference_list, 50, range=(-12,-7), density=True)
             matplotlib.pyplot.savefig("EventTimeDifferenceHistogram(10ns vs num).pdf")
+            matplotlib.pyplot.clf()
+
+        
+        # Calculate rms, shift histogram by mean of data, produce new histogram
+        mean_time_difference = numpy.mean(event_time_difference_list)
+        event_time_difference_mean = [(value-mean_time_difference) for value in event_time_difference_list]
+        matplotlib.pyplot.hist(event_time_difference_mean, 35, range=(-1,2.5),  density=True)
+        matplotlib.pyplot.show()
+        rms_time_difference = numpy.sqrt(numpy.mean([value ** 2 for value in event_time_difference_mean]))
+        
+        print(rms_time_difference)
 
         print("checks: {} ok, {} failed".format(
             self.nchecks_ok, self.nchecks_failed))
