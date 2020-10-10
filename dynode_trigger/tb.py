@@ -185,6 +185,10 @@ class Tester:
         # speed up settling time for baseline average
         dut.dtr.dynbl.currentvalue <= 0x100 * self.adcdat_quiescent
 
+
+        # Number of samples to check
+        num_of_samples = 1250
+
         # Instantiate arrays for plots
         actual_eventtime = list()
         calculated_eventtime = list()
@@ -198,15 +202,24 @@ class Tester:
         event_actual_float_list = list()
         event_time_difference_list = list()
 
+        # Populate a list with whole nums in order
         num_list = list()
-        for i in range(0, 250):
+        for i in range(0, num_of_samples):
             num_list.append(i)
 
-        ## ToDo: provide comments for this section
-        await self.wclk(500)
+
+        # Figure out the RMS and max of our data
         rms = 0.1 * numpy.sqrt(numpy.mean([value ** 2 for value in avgPulse]))
         maxOfAvgPulse = max(avgPulse)
-        for i in range(250):
+
+        # Generate pulses from the interpolated data in the following way:
+        # Figure out an offset that represents the fraction of the clock cycle at which the pulse actually starts
+        #    (we will not necessarily sample the pulse right at the start every time)
+        # Figure out a factor to scale the interpolation by (from a normal distribution)
+        #
+        # Append data relevant for plots to their respective lists
+        await self.wclk(500)
+        for i in range(num_of_samples):
             offset = numpy.random.randint(-50, 50)
             gaussFactor = numpy.random.normal(0, rms, 1) * numpy.random.randint(-1, 2)
             sentPulse = []
@@ -214,65 +227,87 @@ class Tester:
                 value = int(numpy.round(avgPulse[j + offset] * (1 + (gaussFactor / maxOfAvgPulse))))
                 sentPulse.append(value)
 
-
+            # Find the actual clock tick at which we notice the pulse
             current_actual_eventtime = int(str(dut.timcnt), 2)
             actual_eventtime.append(current_actual_eventtime)
+
+            # Send the pulse
             await self.send_pulse(sentPulse)
             await self.wclk(100)
+
+            # Find out the clock tick the program says it noticed the pulse
             current_calculated_eventtime = int(str(dut.evnt_timsd_temp), 2)
             calculated_eventtime.append(current_calculated_eventtime)
+
+            # Append the current event_time_out to its list
             event_time_out_list.append(int(str(dut.event_time_out), 2))
-            
+
+            # Append the current difference in the tick at which we noticed the pulse
+            #    and the tick at which we sent the pulse
+            # Accounts for overflow
             current_difference = abs(current_actual_eventtime - current_calculated_eventtime)
             if current_difference > 100:
                 actual_v_calculated_eventtime_diff.append(abs(current_difference - 255))
             else:
                 actual_v_calculated_eventtime_diff.append(current_difference)
 
+
+            # Interpreting event_time_out as it is meant to be read:
+            # Take the 12 least significant bits which represent the fractional part
+            #    and turn them into the corresponding int
             actual_fraction.append((offset + 50) / 100)
             sd_timfraco_str = str(dut.sd_timfraco)
             sd_timAdjusted_int = int(sd_timfraco_str, 2) + 2560
             sd_timAdjusted_str = "." + bin(sd_timAdjusted_int)
             calculated_fraction.append(Tester.parse_bin(sd_timAdjusted_str))
 
+            # Take the 12 most significant bits which represent the whole number part
+            #    and turn them into the corresponding int
             event_whole_num_list.append(int(str(dut.event_whole_num), 2))
             event_frac_str = str(dut.event_frac)
             event_frac_int = int(event_frac_str, 2)
             event_frac_str = "." + bin(event_frac_int)
             event_frac_list.append(Tester.parse_bin(event_frac_str))
-
             event_actual_float_list.append(current_actual_eventtime + ((offset + 50) / 100))
 
-        for k in range(len(event_whole_num_list)):
+        # Populate a list with the true form of the calculated event time
+        for k in range(num_of_samples):
             event_float_list.append(event_whole_num_list[k] + event_frac_list[k])
 
-        for k in range(250):
+        # Populate a list with the time difference between the
+        #    (true form) actual event time and calculated event time
+        # Accounts for overflow
+        for k in range(num_of_samples):
             time_difference = event_actual_float_list[k] - event_float_list[k]
             if abs(time_difference) > 100:
                 event_time_difference_list.append(time_difference - 255)
             else:
                 event_time_difference_list.append(time_difference)
-            
-        if (len(actual_eventtime) == 250):
+
+        # Plot data
+        if (len(actual_eventtime) == num_of_samples):
             matplotlib.pyplot.scatter(actual_eventtime, calculated_eventtime)
-            matplotlib.pyplot.savefig("TimeCountvsEventTimSD.pdf")
+            matplotlib.pyplot.savefig("TimeCountvsEventTimSD(tick vs tick).pdf")
             matplotlib.pyplot.clf()
 
             matplotlib.pyplot.scatter(num_list, actual_v_calculated_eventtime_diff)
-            matplotlib.pyplot.savefig("DifferenceInActualAndCalculatedEventtime.pdf")
+            matplotlib.pyplot.savefig("DifferenceInActualAndCalculatedEventtime(num vs tick).pdf")
             matplotlib.pyplot.clf()
 
             matplotlib.pyplot.scatter(actual_fraction, calculated_fraction)
-            matplotlib.pyplot.savefig("ActualFractionvsCalculatedFraction.pdf")
+            matplotlib.pyplot.savefig("ActualFractionvsCalculatedFraction(tick vs tick).pdf")
             matplotlib.pyplot.clf()
             
             matplotlib.pyplot.scatter(event_actual_float_list, event_float_list)
-            matplotlib.pyplot.savefig("EventTimeOutAsFloat.pdf")
+            matplotlib.pyplot.savefig("EventTimeOutAsFloat(10ns vs 10ns).pdf")
             matplotlib.pyplot.clf()
 
             matplotlib.pyplot.scatter(num_list, event_time_difference_list)
-            matplotlib.pyplot.savefig("DifferenceInActualAndCalculatedProperTime.pdf")
+            matplotlib.pyplot.savefig("DifferenceInActualAndCalculatedProperTime(num vs 10ns).pdf")
+            matplotlib.pylab.clf()
 
+            matplotlib.pyplot.hist(event_time_difference_list, 50, range=(-12, -7))
+            matplotlib.pyplot.savefig("EventTimeDifferenceHistogram(10ns vs num).pdf")
 
         print("checks: {} ok, {} failed".format(
             self.nchecks_ok, self.nchecks_failed))
