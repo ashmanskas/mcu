@@ -64,7 +64,10 @@ module dynode_trigger_roger
    input wire 	      trigger_data_fifo_ren,
    output wire [15:0] trigger_data_fifo_q,
    output wire 	      trigger_data_fifo_ne,
-   output wire 	      trigger_data_fifo_full
+   output wire 	      trigger_data_fifo_full,
+
+   output reg [11:0] event_whole_num,
+   output reg [11:0] event_frac
 
    );
    
@@ -162,11 +165,15 @@ module dynode_trigger_roger
       .sd_timfraco(sd_timfraco)
       );
 
+
    always @ (posedge clk) begin		 //send coin trigger time
       if (dyn_event_sig == 1'b0 ) MCU_trigger_out <= 8'b11111111 ;
       else if (dyn_event_sig == 1'b1 )begin
 	 if  (evntim_sig[11:6] == 6'b111111 == evntim_sig[11:6]) MCU_trigger_out <= 8'hF8 ;
 	 else MCU_trigger_out <= evntim_sig[11:4] ; end
+      
+      event_whole_num <= evntim_sig[23:12];
+      event_frac <= evntim_sig[11:0];
    end
 
    dynode_integrate dynintg
@@ -508,6 +515,8 @@ module MCU_trigger_rx
    always @ (posedge clk)
      aligned <= (fsm==HALT) && !rst;
    assign out_valid = aligned;
+
+
 endmodule
 
 `default_nettype wire

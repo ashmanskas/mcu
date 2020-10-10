@@ -18,6 +18,9 @@ class Tester:
         self.nchecks_ok = 0
         self.nchecks_failed = 0
 
+    def parse_bin(s):
+        return int(s[1:], 2) / 2. ** (len(s) - 1)
+
     def check(self, expr):
         if expr:
             self.nchecks_ok += 1
@@ -188,6 +191,12 @@ class Tester:
         actual_v_calculated_eventtime_diff = list()
         actual_fraction = list()
         calculated_fraction = list()
+        event_time_out_list = list()
+        event_whole_num_list = list()
+        event_frac_list = list()
+        event_float_list = list()
+        event_actual_float_list = list()
+        event_time_difference_list = list()
 
         num_list = list()
         for i in range(0, 250):
@@ -212,6 +221,7 @@ class Tester:
             await self.wclk(100)
             current_calculated_eventtime = int(str(dut.evnt_timsd_temp), 2)
             calculated_eventtime.append(current_calculated_eventtime)
+            event_time_out_list.append(int(str(dut.event_time_out), 2))
             
             current_difference = abs(current_actual_eventtime - current_calculated_eventtime)
             if current_difference > 100:
@@ -220,8 +230,28 @@ class Tester:
                 actual_v_calculated_eventtime_diff.append(current_difference)
 
             actual_fraction.append((offset + 50) / 100)
-            calculated_fraction.append(int(str(dut.sd_timfraco),2))
+            sd_timfraco_str = str(dut.sd_timfraco)
+            sd_timAdjusted_int = int(sd_timfraco_str, 2) + 2560
+            sd_timAdjusted_str = "." + bin(sd_timAdjusted_int)
+            calculated_fraction.append(Tester.parse_bin(sd_timAdjusted_str))
 
+            event_whole_num_list.append(int(str(dut.event_whole_num), 2))
+            event_frac_str = str(dut.event_frac)
+            event_frac_int = int(event_frac_str, 2)
+            event_frac_str = "." + bin(event_frac_int)
+            event_frac_list.append(Tester.parse_bin(event_frac_str))
+
+            event_actual_float_list.append(current_actual_eventtime + ((offset + 50) / 100))
+
+        for k in range(len(event_whole_num_list)):
+            event_float_list.append(event_whole_num_list[k] + event_frac_list[k])
+
+        for k in range(250):
+            time_difference = event_actual_float_list[k] - event_float_list[k]
+            if abs(time_difference) > 100:
+                event_time_difference_list.append(time_difference - 255)
+            else:
+                event_time_difference_list.append(time_difference)
             
         if (len(actual_eventtime) == 250):
             matplotlib.pyplot.scatter(actual_eventtime, calculated_eventtime)
@@ -234,6 +264,14 @@ class Tester:
 
             matplotlib.pyplot.scatter(actual_fraction, calculated_fraction)
             matplotlib.pyplot.savefig("ActualFractionvsCalculatedFraction.pdf")
+            matplotlib.pyplot.clf()
+            
+            matplotlib.pyplot.scatter(event_actual_float_list, event_float_list)
+            matplotlib.pyplot.savefig("EventTimeOutAsFloat.pdf")
+            matplotlib.pyplot.clf()
+
+            matplotlib.pyplot.scatter(num_list, event_time_difference_list)
+            matplotlib.pyplot.savefig("DifferenceInActualAndCalculatedProperTime.pdf")
 
 
         print("checks: {} ok, {} failed".format(

@@ -55,6 +55,10 @@ module tb;
 
    reg [7:0] evnt_timsd_temp;
    reg [11:0] sd_timfraco;
+
+   reg [11:0] event_whole_num;
+   reg [11:0] event_frac;
+   
    
 
     always @ (posedge clk) timcnt <= timcnt + 1;
@@ -86,7 +90,9 @@ module tb;
        .trigger_data_fifo_ne(trigger_data_fifo_ne),
        .trigger_data_fifo_full(trigger_data_fifo_full),
        .evnt_timsd_temp(evnt_timsd_temp),
-       .sd_timfraco(sd_timfraco));
+       .sd_timfraco(sd_timfraco),
+       .event_whole_num(event_whole_num),
+       .event_frac(event_frac));
 
     dynode_trigger dt
       (.clk(clk), .reset(reset), .ibus(ibus), .obus(obus),
