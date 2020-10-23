@@ -19,7 +19,8 @@ module tb;
    reg            DQ;
 
 
-   always @ (posedge clk) timcnt <= timcnt + 1;
+   reg [31:0] timcnt = 0;
+   always @ (posedge CLK) timcnt <= timcnt + 1;
 
    ds1wm dt
      (.ADDRESS(ADDRESS), .ADS_bar(ADS_bar), .CLK(CLK), .EN_bar(EN_bar),

@@ -51,6 +51,18 @@ module ds1wm (
   wire  [7:0] xmit_buffer;
   wire  [2:0] ADDRESS;
 
+    wire DDIR;
+    wire DQ_CONTROL;
+    wire CLK_EN;
+    wire DQ_IN, LLM, OD, PPM, STP_SPLY, STPEN;
+    wire div_1, div_2, div_3, ias, owr, pd, tbe;
+    wire pre_0, pre_1, epd, erbf, ersf, etbe, etmt;
+    wire clk_1us, clear_interrupts, rbf_reset;
+    wire FSM_CLK, OneWireIO_eq_Load;
+    wire pdr, rbf, reset_owr, rsrf, temt, sr_a;
+    wire OW_LOW, OW_SHORT, BIT_CTL, EN_FOW, EOWL, EOWSH, FOW;
+    wire clr_activate_intr, one_wire_interface;
+
   one_wire_io xone_wire_io(
     CLK, DDIR, DOUT, DQ_CONTROL, MR, DIN, DQ_IN, DATA, DQ);
 
