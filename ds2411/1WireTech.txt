@@ -1,5 +1,7 @@
 -Line's idle state is HIGH
 -Line is pulled down to LOW to signify something
+-Data transmitted least significant bit first
+
 
 HOST WRITE
 -HOST pulls line down to LOW
@@ -21,5 +23,4 @@ TRANSACTION START
 -HOST pulls the line down for 480-640us
 -line stays HIGH for 15-60us (delay)
 -if a DEVICE detects the pulse and wants to communicate, it pulls the line LOW for 60-240us after the delay
--first command after this exchange is interpreted by the interface and control logic; in short, issue 0xCC (SKIP ROM) if communicating with only one device, and issue different commands otherwise
-
+-first command after this exchange is interpreted by the interface and control logic; in short, issue 0x33 (READ ROM) if communicating with only one device, and issue different commands otherwise

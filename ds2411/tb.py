@@ -33,48 +33,7 @@ class Tester:
 
     async def wclk(self, nclk = 1, rising = True):
         """shortcut for await ClockCycles"""
-        await cocotb.triggers.ClockCycles(self.dut.clk, nclk, rising = rising)
-
-    async def wr(self, addr, data, check = None, verbose = None):
-        """write 'addr' := 'data' on register-file bus"""
-        dut = self.dut
-        if verbose is None: verbose = self.verbose
-        await self.wclk()
-        dut.baddr <= addr
-        dut.bwrdata <= data
-        dut.bwr <= 1
-        dut.bstrobe <= 1
-        await self.wclk()
-        dut.baddr <= 0
-        dut.bwrdata <= 0
-        dut.bwr <= 0
-        dut.bstrobe <= 0
-        await self.wclk()
-        if verbose:
-            print("wr {:04x} := {:04x}".format(addr, data))
-        if check is not None:
-            self.check(check.value.integer == data)
-
-    async def rd(self, addr, check = None, verbose = None):
-        """read from register-file bus at address 'addr'"""
-        dut = self.dut
-        if verbose is None: verbose = self.verbose
-        await self.wclk()
-        dut.baddr <= addr
-        dut.bwr <= 0
-        dut.bstrobe <= 0
-        await self.wclk()
-        dut.bstrobe <= 1
-        await self.wclk()
-        data = dut.brddata.value.integer
-        dut.bstrobe <= 0
-        dut.baddr <= 0
-        await self.wclk()
-        if verbose:
-            print("rd {:04x} -> {:04x}".format(addr, data))
-        if check is not None:
-            self.check(data == check)
-        return data
+        await cocotb.triggers.ClockCycles(self.dut.CLK, nclk, rising = rising)
 
     async def run_test(self):
         dut = self.dut

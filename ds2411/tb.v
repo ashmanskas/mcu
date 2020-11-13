@@ -3,41 +3,37 @@
 
 module tb;
 
-   reg   [2:0]    ADDRESS;
-   reg            ADS_bar;
-   reg            CLK;
-   reg            EN_bar;
-   reg            MR;
-   reg            RD_bar;
-   reg            WR_bar;
+   // regs and wires go here
+   wire       go;
+   wire       clk;
+   wire       reset;
+   
+   wire       din;
 
-   wire           INTR;
-   wire           STPZ;
-
-   // two inouts, not sure if they need to be regs or wires
-   reg    [7:0]   DATA;
-   reg            DQ;
+   reg [63:0] result;
+ 
+   wire       error;
+   wire       done;
 
 
-   reg [31:0] timcnt = 0;
-   always @ (posedge CLK) timcnt <= timcnt + 1;
+   read_ds2411 rd2411
+     (.go(go),
+      .clk(clk),
+      .reset(reset),
+      .result(result),
+      .din(din),
+      .done(done),
+      .error(error))
 
-   ds1wm dt
-     (.ADDRESS(ADDRESS), .ADS_bar(ADS_bar), .CLK(CLK), .EN_bar(EN_bar),
-      .MR(MR), .RD_bar(RD_bar), .WR_bar(WR_bar), .INTR(INTR),
-      .STPZ(STPZ), .DATA(DATA), .DQ(DQ));
 
-   reg    [7:0]   pycount = 0;
-
-   initial begin
-      CLK = 0;
-      while (1) begin
-	 // need to check tick rate of clock on ds2411 chip
-	 #500;  // delay 500 units (500ns = 0.5us)
-	 CLK = !CLK;
-      end
-   end
-
+    initial begin
+       clk = 0;
+       while (1) begin
+          #5;  // delay 5 units (which we defined above to be ns)
+          clk = !clk;
+       end
+    end
+   
    initial begin
       $dumpfile("tb.lxt");
       $dumpvars(0, tb);
