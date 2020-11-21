@@ -16,11 +16,13 @@ HOST READ
 -if the DEVICE is trying to transmit a 1, it simply does nothing upon detecting the line being pulled LOW
 -if the DEVICE is trying to transmit a 0, it also pulls the line down to LOW (i.e. keeps it LOW)
 -then the HOST samples the line in between 15-60us from when the line is pulled LOW by the HOST
--still, regardless of what is being sent, the line should be left HIGH for at least 5us afterwards(so the DEVICE shouldn't be pulling the line LOW for longer than 120us after the line is pulled LOW by the HOST)
+-still, regardless of what is being sent, the line should be left HIGH for at least 5us afterwards
+	(so the DEVICE shouldn't be pulling the line LOW for longer than 120us after the line is pulled LOW by the HOST)
 
 
 TRANSACTION START
 -HOST pulls the line down for 480-640us
 -line stays HIGH for 15-60us (delay)
 -if a DEVICE detects the pulse and wants to communicate, it pulls the line LOW for 60-240us after the delay
--first command after this exchange is interpreted by the interface and control logic; in short, issue 0x33 (READ ROM) if communicating with only one device, and issue different commands otherwise
+-first command after this exchange is interpreted by the interface and control logic; in short, issue 0x33 (READ ROM) if communicating with only one
+	device, and issue different commands otherwise

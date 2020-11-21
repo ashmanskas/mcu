@@ -5,17 +5,23 @@ module tb;
 
    // regs and wires go here
    wire       go;
-   wire       clk;
+   reg        clk;
    wire       reset;
    
    wire       din;
 
    reg [63:0] result;
- 
+
+   wire       GND;
+    
    wire       error;
    wire       done;
 
 
+   assign GND = 1'b0;
+   assign reset = 1'b0;
+   assign go = 1'b0;
+   
    read_ds2411 rd2411
      (.go(go),
       .clk(clk),
@@ -23,11 +29,11 @@ module tb;
       .result(result),
       .din(din),
       .done(done),
-      .error(error))
-
+      .GND(GND),
+      .error(error));
 
     initial begin
-       clk = 0;
+       clk <= 0;
        while (1) begin
           #5;  // delay 5 units (which we defined above to be ns)
           clk = !clk;
