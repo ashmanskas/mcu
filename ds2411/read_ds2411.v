@@ -178,9 +178,9 @@ module read_ds2411
 	              @ (posedge tick_1MHz_d1);
 		   end
 		   if (din == GND) begin // Response is stored in read_rom
-		      read_rom[64 - count_store_ROM] <= 1'b0;
+		      read_rom[63 - count_store_ROM] <= 1'b0;
 		   end else begin
-		      read_rom[64 - count_store_ROM] <= 1'b1;
+		      read_rom[63 - count_store_ROM] <= 1'b1;
 		   end
 		   repeat (DELAY + DELAY) begin
 		      @ (posedge tick_1MHz_d1);

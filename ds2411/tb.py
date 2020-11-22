@@ -35,25 +35,55 @@ class Tester:
         """shortcut for await ClockCycles"""
         await cocotb.triggers.ClockCycles(self.dut.clk, nclk, rising = rising)
 
+    async def send_one(self):
+        await cocotb.triggers.Edge(self.dut.din)
+        await cocotb.triggers.Edge(self.dut.din)
+
+    async def send_zero(self):
+        await cocotb.triggers.Edge(self.dut.din)
+        await cocotb.triggers.Edge(self.dut.din)
+        self.dut.din <= 0;
+        await self.wclk(9000)
+        self.dut.din <= 1;
+
+    async def ROM_zeroes(self):
+        for i in range (64):
+            await self.send_zero()
+            await self.wclk(10)
+
+    async def ROM_zero_one_alternating(self):
+        for i in range (32):
+            await self.send_zero()
+            await self.wclk(10)
+            await self.send_one()
+
+    async def ROM_like_expected(self):
+        ## FIll
+        return
+
     async def run_test(self):
         dut = self.dut
         dt = dut.rd2411
 
         await self.wclk(1000)
 
+        ## Start the logic
         dut.go <= 1;
 
+        ## Respond
         await self.wclk(80000)
         dut.din <= 0;
         await self.wclk(1000)
         dut.din <= 1;
+
+        ## Wait for the HOST to send ROM command and initiate writing sequence
         await cocotb.triggers.Edge(dt.smtm)
         await cocotb.triggers.Edge(dt.smtm)
 
-        await cocotb.triggers.Edge(dut.din)
-        await cocotb.triggers.Edge(dut.din)
-        dut.din <= 0;
-        await self.wclk()
+        ## Write ROM string
+        await self.ROM_zero_one_alternating()
+
+        await self.wclk(50000)
 
         print("checks: {} ok, {} failed".format(
             self.nchecks_ok, self.nchecks_failed))
