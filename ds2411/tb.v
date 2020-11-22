@@ -17,10 +17,13 @@ module tb;
    wire       error;
    wire       done;
 
+   wire       working;
+
 
    assign GND = 1'b0;
    assign reset = 1'b0;
    assign go = 1'b0;
+   assign working = 1'b0;
    
    read_ds2411 rd2411
      (.go(go),
@@ -30,7 +33,8 @@ module tb;
       .din(din),
       .done(done),
       .GND(GND),
-      .error(error));
+      .error(error),
+      .working(working));
 
     initial begin
        clk <= 0;

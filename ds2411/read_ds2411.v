@@ -11,14 +11,15 @@
 
 module read_ds2411
   (
-   input  wire         go,      // pulse to start the bus cycle
+   input  wire        go,      // pulse to start the bus cycle
    input  wire 	      clk,     // 100 MHz system-wide master clock
    input  wire 	      reset,   // logic reset
    input  wire        GND,     // ground
    output reg  [63:0] result,  // readback from DS2411
    inout  wire 	      din,     // serial data to and from DS2411
    output reg 	      error,   // HIGH if no device response was detected
-   output reg 	      done     // HIGH if a device was detected and the bus cycle carried out
+   output reg 	      done,    // HIGH if a device was detected and the bus cycle carried out
+   output reg         working  // HIGH if in logic loop
   );
    
    // Set power-up values for 'reg' outputs
@@ -73,7 +74,10 @@ module read_ds2411
    reg [3:0]   smtm = 0;
    always @ (posedge tick_1MHz_d1) begin
       if (reset) begin
-	 smtm <= 3'b0;
+	 assign done = 0;
+	 assign error = 0;
+	 assign working = 0;
+	 smtm <= stm0;
       end else begin
 	 case(smtm)
 	   // State 0: Wait for go
@@ -88,6 +92,7 @@ module read_ds2411
 		count_start_response <= 0;
 				
 		if (go) begin
+		   assign working = 1;
 		   smtm <= stm1;
 		end else begin
 		   smtm <= stm0;
@@ -121,8 +126,9 @@ module read_ds2411
 		      smtm <= stm4;
 		   end else begin  // if no response end with:
 		      count_start_response <= 0;
-		      error <= 1'b1; // error set to HIGH
-		      done <= 1'b0;  // done set to LOW
+		      assign error = 1; // error set to HIGH
+		      assign done = 0;  // done set to LOW
+		      assign working = 0;
 		      smtm <= stm0;  // move to State 0
 		   end
 	        end else begin 
@@ -196,8 +202,9 @@ module read_ds2411
 	   stm6:
 	     begin
 	        result <= read_rom;
-		assign done = 1'b1;
-		assign error = 1'b0;
+		assign done = 1;
+		assign error = 0;
+		assign working = 0;
 		smtm <= stm0;
 	     end
 	 endcase

@@ -56,12 +56,35 @@ class Tester:
             await self.send_zero()
             await self.wclk(10)
             await self.send_one()
+            await self.wclk(10)
 
     async def ROM_like_expected(self):
-        ## FIll
-        return
+        ## Sample CRC byte
+        for i in range (4):
+            await self.send_zero()
+            await self.wclk(10)
+            await self.send_one()
+            await self.wclk(10)
 
-    async def run_test(self):
+        ## Sample serial code (6 bytes)
+        for i in range(12):
+            await self.send_zero()
+            await self.wclk(10)
+            await self.send_one()
+            await self.wclk(10)
+            await self.send_one()
+            await self.wclk(10)
+            await self.send_zero()
+            await self.wclk(10)
+
+        ## Sample family code byte
+        for i in range(7):
+            await self.send_zero()
+            await self.wclk(10)
+        await self.send_one()
+        await self.wclk(10)
+
+    async def run_test_sample_ROM(self):
         dut = self.dut
         dt = dut.rd2411
 
@@ -73,6 +96,7 @@ class Tester:
         ## Respond
         await self.wclk(80000)
         dut.din <= 0;
+        dut.go <= 0;
         await self.wclk(1000)
         dut.din <= 1;
 
@@ -81,7 +105,74 @@ class Tester:
         await cocotb.triggers.Edge(dt.smtm)
 
         ## Write ROM string
-        await self.ROM_zero_one_alternating()
+        await self.ROM_like_expected()
+
+        ## Reset the logic after a delay
+        await cocotb.triggers.Edge(dt.done)
+        await self.wclk(100000)
+        dut.reset <= 1;
+        await self.wclk(1500)
+        dut.reset <= 0;
+
+        print("checks: {} ok, {} failed".format(
+            self.nchecks_ok, self.nchecks_failed))
+        if self.nchecks_failed:
+            raise cocotb.result.TestFailure(
+                "failed {} checks".format(self.nchecks_failed))
+
+    async def run_test_reset(self):
+        dut = self.dut
+        dt = dut.rd2411
+
+        await self.wclk(1000)
+
+        ## Start the logic
+        dut.go <= 1;
+
+        ## Respond
+        await self.wclk(80000)
+        dut.din <= 0;
+        dut.go <= 0;
+        await self.wclk(1000)
+        dut.din <= 1;
+
+        ## Wait for the HOST to send ROM command and initiate writing sequence
+        await cocotb.triggers.Edge(dt.smtm)
+        await cocotb.triggers.Edge(dt.smtm)
+
+        ## Cut the logic off
+        dut.reset <= 1;
+        await self.wclk(30000)
+        dut.reset <= 0;
+        await self.wclk(1500)
+
+        await self.wclk(50000)
+
+        print("checks: {} ok, {} failed".format(
+            self.nchecks_ok, self.nchecks_failed))
+        if self.nchecks_failed:
+            raise cocotb.result.TestFailure(
+                "failed {} checks".format(self.nchecks_failed))
+
+    async def run_test_no_response(self):
+        dut = self.dut
+        dt = dut.rd2411
+
+        await self.wclk(1000)
+
+        ## Start the logic
+        dut.go <= 1;
+        await self.wclk(10000)
+        dut.go <= 0;
+
+        ## Wait for error to be announced
+        await cocotb.triggers.Edge(dt.error)
+
+        ## Reset the logic after a delay
+        await self.wclk(10000)
+        dut.reset <= 1;
+        await self.wclk(1500)
+        dut.reset <= 0;
 
         await self.wclk(50000)
 
@@ -96,4 +187,8 @@ class Tester:
 async def tests(dut):
     """instantiate Tester class then run its test(s)"""
     tester = Tester(dut)
-    await tester.run_test()
+    await tester.run_test_sample_ROM()
+    await tester.wclk(100000)
+    await tester.run_test_reset()
+    await tester.wclk(100000)
+    await tester.run_test_no_response()
