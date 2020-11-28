@@ -198,7 +198,7 @@ class Tester:
         #await self.wclk(500)
         for i in range(num_of_samples):
             #offset = 90
-            offset = numpy.random.randint(80,100)
+            offset = numpy.random.randint(0,100)
             gaussFactor = numpy.random.normal(0, rms, 1) * numpy.random.randint(-1, 2)
             sentPulse = []
             for j in range(0, 800, 100):
@@ -253,19 +253,23 @@ class Tester:
             #    and turn them into the corresponding int
             actual_fraction.append((offset) / 100)
             sd_timfraco_str =  str(dut.sd_timfraco)
-            sd_timAdjusted_int = Tester.parse_bin(sd_timfraco_str) #- 0.19
-            #sd_timAdjusted_str = Tester.strip0b(bin(sd_timAdjusted_int))
+            sd_timAdjusted_int = Tester.parse_bin(sd_timfraco_str) - 0.19
+
+            ## THIS IS IMPORTANT: PUT THIS IN VERILOG!!!!!!
             if 1 - sd_timAdjusted_int >= 1:
-                current_calculated_fraction = 1 - sd_timAdjusted_int 
+                current_calculated_fraction = - sd_timAdjusted_int 
                 calculated_fraction.append(current_calculated_fraction)
-                current_calculated_eventtime = current_calculated_eventtime - 1
-                calculated_eventtime.append(current_calculated_eventtime)
+                if sentPulse[3] - sentPulse[4] >= 0:
+                    current_calculated_eventtime = current_calculated_eventtime + 1
+                    calculated_eventtime.append(current_calculated_eventtime)
+                else:
+                    current_calculated_eventtime = current_calculated_eventtime - 1
+                    calculated_eventtime.append(current_calculated_eventtime)
             else:
                 current_calculated_fraction = 1 - sd_timAdjusted_int
                 calculated_fraction.append(current_calculated_fraction)
                 calculated_eventtime.append(current_calculated_eventtime)
-            #calculated_fraction.append(Tester.parse_bin(sd_timAdjusted_str))
-            #print(sd_timAdjusted_int)
+            
 
              # Append the current difference in the tick at which we noticed the pulse
             #    and the tick at which we sent the pulse
