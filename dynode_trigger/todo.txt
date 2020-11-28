@@ -1,0 +1,3 @@
+For Saturday:
+- energy difference between 4th and 5th sample of sentPulse is > 0 for offsets > 0.9
+- use this to correct the time fraction and whole number part for those offsets
