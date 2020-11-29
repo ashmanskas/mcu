@@ -218,13 +218,13 @@ class Tester:
             await self.send_pulse(sentPulse)
             await self.wclk(100)
 
-            sd_negative = Tester.twos_comp(str(dut.enesd_no))
-            sd_positive = int(str(dut.enesd_po),2)
-            fraction_pn = sd_negative/(sd_negative + sd_positive) + 0.2
-            if fraction_pn > 1:
-                fraction_pn = fraction_pn - 1
+            #sd_negative = Tester.twos_comp(str(dut.enesd_no))
+            #sd_positive = int(str(dut.enesd_po),2)
+            #fraction_pn = sd_negative/(sd_negative + sd_positive) + 0.2
+            #if fraction_pn > 1:
+            #    fraction_pn = fraction_pn - 1
             #int(str(dut.enesd_po),2)/int(str(dut.enesd_no),2)
-            calculated_fraction_pn.append(float(fraction_pn))
+            #calculated_fraction_pn.append(float(fraction_pn))
             #print(sd_positive)
             #print(sd_negative)
             #print(fraction_pn)
@@ -235,8 +235,8 @@ class Tester:
             current_calculated_eventtime = int(str(dut.evnt_timsd_temp), 2)
             #calculated_eventtime.append(current_calculated_eventtime)
 
-            current_time = current_calculated_eventtime + fraction_pn
-            calculated_with_fraction.append(current_time)
+            #current_time = current_calculated_eventtime + fraction_pn
+            #calculated_with_fraction.append(current_time)
             #print(current_time)
             #print("#")
 
@@ -253,11 +253,11 @@ class Tester:
             #    and turn them into the corresponding int
             actual_fraction.append((offset) / 100)
             sd_timfraco_str =  str(dut.sd_timfraco)
-            sd_timAdjusted_int = Tester.parse_bin(sd_timfraco_str) - 0.19
+            sd_timAdjusted_int = Tester.parse_bin(sd_timfraco_str) 
 
             ## THIS IS IMPORTANT: PUT THIS IN VERILOG!!!!!!
-            if 1 - sd_timAdjusted_int >= 1:
-                current_calculated_fraction = - sd_timAdjusted_int 
+            if sd_timAdjusted_int <= 0.19:
+                current_calculated_fraction = - sd_timAdjusted_int + 0.19
                 calculated_fraction.append(current_calculated_fraction)
                 if sentPulse[3] - sentPulse[4] >= 0:
                     current_calculated_eventtime = current_calculated_eventtime + 1
@@ -266,7 +266,7 @@ class Tester:
                     current_calculated_eventtime = current_calculated_eventtime - 1
                     calculated_eventtime.append(current_calculated_eventtime)
             else:
-                current_calculated_fraction = 1 - sd_timAdjusted_int
+                current_calculated_fraction = 1.19 - sd_timAdjusted_int
                 calculated_fraction.append(current_calculated_fraction)
                 calculated_eventtime.append(current_calculated_eventtime)
             
@@ -285,15 +285,12 @@ class Tester:
             #    and turn them into the corresponding int
             dif_whole_num = int(str(dut.event_whole_num), 2) - int(str(dut.evnt_timsd_temp), 2)
             dif_whole_num_list.append(dif_whole_num)
+            
             event_whole_num_list.append(int(str(dut.event_whole_num), 2))
             event_frac_str = str(dut.event_frac)
-            event_frac_int = int(event_frac_str, 2)
-            event_frac_str = Tester.strip0b(bin(event_frac_int))
-            #event_frac_str = "." + bin(event_frac_int)
-            event_frac_list.append(Tester.parse_bin(event_frac_str))
+            event_frac_int = Tester.parse_bin(event_frac_str)
+            event_frac_list.append(event_frac_int)
             event_actual_float_list.append(current_actual_eventtime + ((offset) / 100))
-            #print(event_frac_int)
-            #print("#")
 
         for k in range(num_of_samples):
             event_time.append(calculated_eventtime[k] + calculated_fraction[k])
@@ -301,18 +298,19 @@ class Tester:
         # Populate a list with the true form of the calculated event time
         for k in range(num_of_samples):
             event_float_list.append(event_whole_num_list[k] + event_frac_list[k])
-            #event_float_list.append(calculated_eventtime[k] + calculated_fraction[k])
             
         # Populate a list with the time difference between the
         #    (true form) actual event time and calculated event time
         # Accounts for overflow
         for k in range(num_of_samples):
-            time_difference = event_actual_float_list[k] - event_time[k]
+            time_difference = event_actual_float_list[k] - event_float_list[k] #event_time[k]
             #event_float_list[k] #calculated_with_fraction[k]
             if abs(time_difference) > 100:
                 event_time_difference_list.append(time_difference - 256)
             else:
-                event_time_difference_list.append(time_difference)        
+                event_time_difference_list.append(time_difference)
+
+                
         x_array = list()
         for i in range(0, len(actual_v_calculated_eventtime_diff)):
             x_array.append(i)
@@ -336,7 +334,7 @@ class Tester:
             matplotlib.pyplot.savefig("SD_DifferenceInActualAndCalculatedEventtime(numVtick).pdf")
             matplotlib.pyplot.clf()
 
-            matplotlib.pyplot.scatter(actual_fraction, calculated_fraction, s=5)# event_frac_list) # calculated_fraction_pn)
+            matplotlib.pyplot.scatter(actual_fraction, event_frac_list, s=5)# event_frac_list) # calculated_fraction_pn)
             matplotlib.pyplot.xlabel("Actual Event Time Fraction")
             matplotlib.pyplot.ylabel("Calculated Event Time Fraction")
             matplotlib.pyplot.savefig("SD_ActualFractionvsCalculatedFraction(tickVtick).pdf")
