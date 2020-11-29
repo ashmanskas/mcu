@@ -49,7 +49,7 @@ module dynode_eventdet
    localparam
      //selecttime        = 0,    	// 0 = time from SD, 1 = time from cfd enetot 4 point, 2 = 1 pt
      //smoothpmt	 = 3,     	// set number of points in smooth  
-     sdtim0adj 	     = 12'hA00, 	// time adjust for sd time
+     sdtim0adj 	     = 12'b001100001010,   //12'hA00, 	// time adjust for sd time
      cfdtim1adj      = 12'hE40, 	// time adjust for cfd 1 time
      cfdtim2adj      = 12'h980, 	// time adjust for cfd 2 time
      cfdtim1dly      = 6,    	        // sets number of clk cyc delays for timming test 1
@@ -142,7 +142,10 @@ module dynode_eventdet
    reg sdneg;	
    reg [24:0] sd_timfrac;	// fraction of clock cycle sd crossing occured
    reg [23:0] sd_timadj;	// fraction of clock cycle sd crossing adjusted
-   reg 	      sd_delay;	
+   reg 	      sd_delay;
+   reg [12:0] fraction;
+   reg [11:0] whole_num;
+   
    
    always @ (*) begin // select sd time or cfd time
       if ((indet == 1'b1) & (enefd > fdonlevel) & (enefd[14] != 1'b1) & (smed ==sed0)) fden = 1'b1;
@@ -163,9 +166,21 @@ module dynode_eventdet
    end
 
    always @ (*) begin
+      
+      if (sd_timfrac[15:4] <= sdtim0adj) begin
+	 fraction <= {1'b0, sdtim0adj} - {1'b0, sd_timfrac[15:4]};
+	 if (enefd <= 0) begin
+	    whole_num <= evnt_timsd + 1; end
+	 else begin
+	    whole_num <= evnt_timsd - 1; end
+      end else begin
+	 fraction <= {1'b1, sdtim0adj} - {1'b0, sd_timfrac[15:4]};
+	 whole_num <= evnt_timsd;
+      end
 
-      sd_timadj <= {evnt_timsd, sd_timfrac[15:4]} + {8'h00, sdtim0adj};
+      sd_timadj <= {whole_num, 12'b000000000000} + {11'b00000000000, fraction};
       sd_delay <= (sd_timadj[12] != evnt_timsd[0]);
+	 
       
       // determine size of enesd_dif to scale to inverse value and multiply for timing
       if (enesd_dif[13] == 1'b1) begin
