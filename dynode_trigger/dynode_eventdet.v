@@ -52,7 +52,7 @@ module dynode_eventdet
    localparam
      //selecttime        = 0,    	// 0 = time from SD, 1 = time from cfd enetot 4 point, 2 = 1 pt
      //smoothpmt	 = 3,     	// set number of points in smooth  
-     sdtim0adj 	     = 12'b001100001010,  // 001100001010  //12'hA00, 	// time adjust for sd time
+     sdtim0adj 	     = 12'b001100001001,  // 001100001011  //12'hA00, 	// time adjust for sd time
      cfdtim1adj      = 12'hE40, 	// time adjust for cfd 1 time
      cfdtim2adj      = 12'h980, 	// time adjust for cfd 2 time
      cfdtim1dly      = 6,    	        // sets number of clk cyc delays for timming test 1
@@ -180,10 +180,10 @@ module dynode_eventdet
 
       if (sd_timfrac[15:4] <= sdtim0adj) begin
 	 fraction <= {1'b0, sdtim0adj} - {1'b0, sd_timfrac[15:4]};
-	 if (dynblcor_d[5] <= dynblcor_d[6]) begin
-	    whole_num <= evnt_timsd + 1'b1; end
+	 if (dynblcor_d[0] >= dynblcor_d[1]) begin
+	    whole_num <= evnt_timsd - 1'b1; end
 	 else begin
-	    whole_num <= evnt_timsd - 1'b1; end 
+	    whole_num <= evnt_timsd + 1'b1; end 
       end else begin
 	 fraction <= {1'b1, sdtim0adj} - {1'b0, sd_timfrac[15:4]};
 	 whole_num <= evnt_timsd;
@@ -191,8 +191,8 @@ module dynode_eventdet
 
       whole_num_sum <= whole_num + fraction[12];
 
-      sd_timadj <= {4'b0000, whole_num_sum, fraction[11:0]};
-      sd_delay <= (sd_timadj[12] != whole_num_sum[0]);
+      sd_timadj <= {3'b000, whole_num_sum, fraction[11:0]};
+      sd_delay <= 1'b1; //(sd_timadj[12] != whole_num_sum[0]);
 	 
       
       // determine size of enesd_dif to scale to inverse value and multiply for timing

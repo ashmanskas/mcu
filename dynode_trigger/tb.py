@@ -191,7 +191,7 @@ class Tester:
         # Append data relevant for plots to their respective lists
         await self.wclk(500)
         for i in range(num_of_samples):
-            #offset = 90
+            #offset = 5
             offset = numpy.random.randint(0, 100)
             gaussFactor = numpy.random.normal(0, rms, 1) * numpy.random.randint(-1, 2)
             sentPulse = []
@@ -202,6 +202,15 @@ class Tester:
             # Find the actual clock tick at which we notice the pulse
             current_actual_eventtime = int(str(dut.timcnt), 2)
             actual_eventtime.append(current_actual_eventtime)
+
+            # print()
+            # print("Actual whole number is: " + str(current_actual_eventtime))
+            # print("Actual fraction is: 0." + str(offset))
+            # print()
+            # print("Actual float is: " + str(current_actual_eventtime) + "." + str(offset))
+            # print()
+            # print()
+            # print()
             
             # Send the pulse
             await self.send_pulse(sentPulse)
@@ -237,42 +246,67 @@ class Tester:
             sd_timfraco_str =  str(dut.sd_timfraco)
             sd_timAdjusted_int = Tester.parse_bin(sd_timfraco_str) 
 
+            # print()
+            # print("Passed whole num is: " + str(current_calculated_eventtime))
+            # print("Passed frac is: " + str(sd_timAdjusted_int))
             ## THIS IS IMPORTANT: PUT THIS IN VERILOG!!!!!!
             if sd_timAdjusted_int <= 0.19:
+                # print("Passed frac is smaller than 0.19")
                 current_calculated_fraction = - sd_timAdjusted_int + 0.19
+                # print("Calculated frac is 0.19 - passed fraction: " + str(current_calculated_fraction))
                 calculated_fraction.append(current_calculated_fraction)
                 if enesmo_d3 - enesmo_d2 >= 0:
+                    # print("Actual offset is greater than or equal to 0.9")
                     current_calculated_eventtime = current_calculated_eventtime + 1
+                    # print("Adding one to passed whole num: " + str(current_calculated_eventtime))
                     calculated_eventtime.append(current_calculated_eventtime)
                 else:
+                    # print("Actual offset is in [0, 0.12] (roughly)")
                     current_calculated_eventtime = current_calculated_eventtime - 1
+                    # print("Subtracting one from passed whole num: " + str(current_calculated_eventtime))
                     calculated_eventtime.append(current_calculated_eventtime)
             else:
+                # print("Passed frac is in <0.12, 1> (roughly)")
                 current_calculated_fraction = 1.19 - sd_timAdjusted_int
+                # print("Calculated frac is 1.19 - passed fraction: " + str(current_calculated_fraction))
                 calculated_fraction.append(current_calculated_fraction)
                 calculated_eventtime.append(current_calculated_eventtime)
-            
 
-             # Append the current difference in the tick at which we noticed the pulse
-            #    and the tick at which we sent the pulse
-            # Accounts for overflow
-            current_difference = abs(current_actual_eventtime - current_calculated_eventtime)
-            if current_difference > 100:
-                actual_v_calculated_eventtime_diff.append(abs(current_difference - 256))
-            else:
-                actual_v_calculated_eventtime_diff.append(current_difference)
+            # print()
+            # print("Calculated whole num is: " + str(current_calculated_eventtime))
+            # print("Calculated fraction is: " + str(current_calculated_fraction))
+            # print()
+            # print("Python calculated float is: " + str(current_calculated_eventtime + current_calculated_fraction))
+            # print()
 
 
             # Take the 12 most significant bits which represent the whole number part
             #    and turn them into the corresponding int
             dif_whole_num = int(str(dut.event_whole_num), 2) - int(str(dut.evnt_timsd_temp), 2)
+            event_whole_thing = int(str(dut.event_whole_num), 2)
             dif_whole_num_list.append(dif_whole_num)
             
             event_whole_num_list.append(int(str(dut.event_whole_num), 2))
             event_frac_str = str(dut.event_frac)
             event_frac_int = Tester.parse_bin(event_frac_str)
+
+            # print()
+            # print("Verilog calculated float: " + str(event_whole_thing + event_frac_int))
+            # print()
+            # print()
+            # print()
+
             event_frac_list.append(event_frac_int)
             event_actual_float_list.append(current_actual_eventtime + ((offset) / 100))
+
+            # Append the current difference in the tick at which we noticed the pulse
+            #    and the tick at which we sent the pulse
+            # Accounts for overflow
+            current_difference = abs(current_actual_eventtime - event_whole_thing)
+            if current_difference > 100:
+                actual_v_calculated_eventtime_diff.append(abs(current_difference - 256))
+            else:
+                actual_v_calculated_eventtime_diff.append(current_difference)
 
         for k in range(num_of_samples):
             event_time.append(calculated_eventtime[k] + calculated_fraction[k])
@@ -304,16 +338,11 @@ class Tester:
             x_array.append(i)
         # Plot data
         if (len(actual_eventtime) == num_of_samples):
-            matplotlib.pyplot.scatter(actual_eventtime, calculated_eventtime)
-            matplotlib.pyplot.xlabel("Actual Event Time (no fraction)")
-            matplotlib.pyplot.ylabel("Calculated Event Time (no fraction)")
-            matplotlib.pyplot.savefig("SD_TimeCountvsEventTimSD(tickVtick).pdf")
-            matplotlib.pyplot.clf()
 
-            matplotlib.pyplot.scatter(calculated_fraction, actual_v_calculated_eventtime_diff, s=4)
+            matplotlib.pyplot.scatter(event_frac_list, actual_v_calculated_eventtime_diff, s=4)
             matplotlib.pyplot.xlabel("Calculated Event Time Fraction")
             matplotlib.pyplot.ylabel("Whole Num Diff")
-            matplotlib.pyplot.savefig("FractionVsWholeNumDiff.pdf")
+            matplotlib.pyplot.savefig("CalculatedFractionVsWholeNumDiff.pdf")
             matplotlib.pyplot.clf()
 
             matplotlib.pyplot.scatter(x_array, actual_v_calculated_eventtime_diff)
@@ -322,7 +351,7 @@ class Tester:
             matplotlib.pyplot.savefig("SD_DifferenceInActualAndCalculatedEventtime(numVtick).pdf")
             matplotlib.pyplot.clf()
 
-            matplotlib.pyplot.scatter(actual_fraction, event_frac_list, s=5)# event_frac_list) # calculated_fraction_pn)
+            matplotlib.pyplot.scatter(actual_fraction, event_frac_list, s=5)
             matplotlib.pyplot.xlabel("Actual Event Time Fraction")
             matplotlib.pyplot.ylabel("Calculated Event Time Fraction")
             matplotlib.pyplot.savefig("SD_ActualFractionvsCalculatedFraction(tickVtick).pdf")
@@ -340,34 +369,22 @@ class Tester:
             matplotlib.pyplot.savefig("SD_EventTimeOutAsFloat(10nsV10ns).pdf")
             matplotlib.pyplot.clf()
 
-            matplotlib.pyplot.scatter(num_list, dif_whole_num_list)
-            matplotlib.pyplot.xlabel("x array")
-            matplotlib.pyplot.ylabel("Difference in Calculated Ticks")
-            matplotlib.pyplot.savefig("SD_DifferenceInCalculatedTicks.pdf")
-            matplotlib.pyplot.clf()
-
-            matplotlib.pyplot.scatter(num_list, sorted(event_frac_list), s=5)
-            matplotlib.pyplot.xlabel("x array")
-            matplotlib.pyplot.ylabel("Calculated Time Fraction")
-            matplotlib.pyplot.savefig("SD_TimeFractions.pdf")
-            matplotlib.pyplot.clf()
-
-            matplotlib.pyplot.scatter(num_list, event_time_difference_list, s=5)
-            matplotlib.pyplot.xlabel("x array")
-            matplotlib.pyplot.ylabel("Difference in Event Times (with fraction)")
-            matplotlib.pyplot.savefig("SD_DifferenceInActualAndCalculatedProperTime(numV10ns).pdf")
-            matplotlib.pyplot.clf()
-
-            matplotlib.pyplot.hist(event_time_difference_list, 40) #range=(-12, -8), density=True)
+            matplotlib.pyplot.hist(event_time_difference_list, 40)
             matplotlib.pyplot.xlabel("Event Time Differences")
             matplotlib.pyplot.ylabel("Normalized Count")
             matplotlib.pyplot.savefig("SD_EventTimeDifferenceHistogram(10nsVnum).pdf")
             matplotlib.pyplot.clf()
 
-            matplotlib.pyplot.scatter(num_list, dif_whole_num_list)
-            matplotlib.pyplot.xlabel("x array")
+            matplotlib.pyplot.scatter(event_frac_list, dif_whole_num_list)
+            matplotlib.pyplot.xlabel("Calculated fraction")
             matplotlib.pyplot.ylabel("Difference in Calculated Ticks")
-            matplotlib.pyplot.savefig("SD_DifferenceInCalculatedTicks(numV10ns).pdf")
+            matplotlib.pyplot.savefig("TickDiffVSCalculatedFrac(10nsV10ns).pdf")
+            matplotlib.pyplot.clf()
+
+            matplotlib.pyplot.scatter(actual_fraction, actual_v_calculated_eventtime_diff, s=4)
+            matplotlib.pyplot.xlabel("Calculated Event Time Fraction")
+            matplotlib.pyplot.ylabel("Whole Num Diff")
+            matplotlib.pyplot.savefig("ActualFractionVsWholeNumDiff.pdf")
             matplotlib.pyplot.clf()
 
         # Calculate rms, shift histogram by mean of data, produce new histogram
