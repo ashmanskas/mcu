@@ -58,7 +58,9 @@ module tb;
 
    reg [11:0] event_whole_num;
    reg [11:0] event_frac;
-   
+
+   reg [13:0] enesmo_d2;
+   reg [13:0] enesmo_d3;   
    
 
     always @ (posedge clk) timcnt <= timcnt + 1;
@@ -92,7 +94,9 @@ module tb;
        .evnt_timsd_temp(evnt_timsd_temp),
        .sd_timfraco(sd_timfraco),
        .event_whole_num(event_whole_num),
-       .event_frac(event_frac));
+       .event_frac(event_frac),
+       .enesmo_d2(enesmo_d2),
+       .enesmo_d3(enesmo_d3));
 
     dynode_trigger dt
       (.clk(clk), .reset(reset), .ibus(ibus), .obus(obus),

@@ -25,6 +25,9 @@ module dynode_eventdet
    output reg 	     dyn_pudump, //fd to wide
    output reg [23:0] evntim,
    output reg [7:0]  evnt_timsd_t, // temp output for scatter plot
+
+   output reg [13:0]     enesmo_d2,
+   output reg [13:0]     enesmo_d3,
   
    //   output for simulation
    // , output reg [14:0] fdo,
@@ -49,7 +52,7 @@ module dynode_eventdet
    localparam
      //selecttime        = 0,    	// 0 = time from SD, 1 = time from cfd enetot 4 point, 2 = 1 pt
      //smoothpmt	 = 3,     	// set number of points in smooth  
-     sdtim0adj 	     = 12'b001100001010,   //12'hA00, 	// time adjust for sd time
+     sdtim0adj 	     = 12'b001100001010,  // 001100001010  //12'hA00, 	// time adjust for sd time
      cfdtim1adj      = 12'hE40, 	// time adjust for cfd 1 time
      cfdtim2adj      = 12'h980, 	// time adjust for cfd 2 time
      cfdtim1dly      = 6,    	        // sets number of clk cyc delays for timming test 1
@@ -65,11 +68,20 @@ module dynode_eventdet
 
    // Delay  to smooth data for 100 mhz sample 
    // rate to remove dead spots do to rise time less then 10 ns.
-   reg [11:0] 	     dynblcor_d [2:0];
+   reg [11:0] 	     dynblcor_d [9:0];
    always @ (posedge clk) begin
       dynblcor_d[0] <= dyn_blcor;
       dynblcor_d[1] <= dynblcor_d[0];
       dynblcor_d[2] <= dynblcor_d[1];
+      dynblcor_d[3] <= dynblcor_d[2];
+      dynblcor_d[4] <= dynblcor_d[3];
+      dynblcor_d[5] <= dynblcor_d[4];
+      dynblcor_d[6] <= dynblcor_d[5];
+      dynblcor_d[7] <= dynblcor_d[6];
+      dynblcor_d[8] <= dynblcor_d[7];
+      dynblcor_d[9] <= dynblcor_d[8];
+      dynblcor_d[10] <= dynblcor_d[9];
+      dynblcor_d[11] <= dynblcor_d[10];
    end
 
    
@@ -131,9 +143,7 @@ module dynode_eventdet
 	 enesd_p <= enesd_d;
 	 evnt_timsd <= timcnt;
 	 evnt_timsd_t <= evnt_timsd;
-	 
-      end	
-      
+       end      
    end
    
    reg evnten;		        // start looking for sd neg to capture event data
@@ -145,6 +155,7 @@ module dynode_eventdet
    reg 	      sd_delay;
    reg [12:0] fraction;
    reg [11:0] whole_num;
+   reg [11:0] whole_num_sum;
    
    
    always @ (*) begin // select sd time or cfd time
@@ -166,20 +177,22 @@ module dynode_eventdet
    end
 
    always @ (*) begin
-      
+
       if (sd_timfrac[15:4] <= sdtim0adj) begin
 	 fraction <= {1'b0, sdtim0adj} - {1'b0, sd_timfrac[15:4]};
-	 if (enefd <= 0) begin
-	    whole_num <= evnt_timsd + 1; end
+	 if (dynblcor_d[5] <= dynblcor_d[6]) begin
+	    whole_num <= evnt_timsd + 1'b1; end
 	 else begin
-	    whole_num <= evnt_timsd - 1; end
+	    whole_num <= evnt_timsd - 1'b1; end 
       end else begin
 	 fraction <= {1'b1, sdtim0adj} - {1'b0, sd_timfrac[15:4]};
 	 whole_num <= evnt_timsd;
       end
 
-      sd_timadj <= {whole_num, 12'b000000000000} + {11'b00000000000, fraction};
-      sd_delay <= (sd_timadj[12] != evnt_timsd[0]);
+      whole_num_sum <= whole_num + fraction[12];
+
+      sd_timadj <= {4'b0000, whole_num_sum, fraction[11:0]};
+      sd_delay <= (sd_timadj[12] != whole_num_sum[0]);
 	 
       
       // determine size of enesd_dif to scale to inverse value and multiply for timing
@@ -320,7 +333,10 @@ module dynode_eventdet
       enesmo_d[15] <= enesmo_d[14];
       enesmo_last <= enesmo_d[cfdtimdly];
       
-      
+      if (dynblcor_d[9] == 12'b000000000000) begin
+	 enesmo_d3 <= {2'b00, dynblcor_d[4]};
+	 enesmo_d2 <= {2'b00, dynblcor_d[3]};
+      end
    end
    
    //sum 4 to find energy value save peak value

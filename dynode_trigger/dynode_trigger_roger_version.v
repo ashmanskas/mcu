@@ -67,7 +67,10 @@ module dynode_trigger_roger
    output wire 	      trigger_data_fifo_full,
 
    output reg [11:0] event_whole_num,
-   output reg [11:0] event_frac
+   output reg [11:0] event_frac,
+
+   output reg [13:0] enesmo_d2,
+   output reg [13:0] enesmo_d3
 
    );
    
@@ -162,7 +165,9 @@ module dynode_trigger_roger
       .dyn_pudump(dyn_pudump_sig) ,	// output  dyn_pudump_sig
       .evntim(evntim_sig), 	// output [23:0] evntim_sig
       .evnt_timsd_t(evnt_timsd_temp), // temp output for scatter plot
-      .sd_timfraco(sd_timfraco)
+      .sd_timfraco(sd_timfraco),
+      .enesmo_d2(enesmo_d2),
+      .enesmo_d3(enesmo_d3)
       );
 
 
@@ -172,7 +177,7 @@ module dynode_trigger_roger
 	 if  (evntim_sig[11:6] == 6'b111111 == evntim_sig[11:6]) MCU_trigger_out <= 8'hF8 ;
 	 else MCU_trigger_out <= evntim_sig[11:4] ; end
       
-      event_whole_num <= evntim_sig[23:12];
+      event_whole_num <= {4'b0000, evntim_sig[19:12]};
       event_frac <= evntim_sig[11:0];
    end
 
