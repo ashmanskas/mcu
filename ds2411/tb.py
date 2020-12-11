@@ -101,8 +101,8 @@ class Tester:
         dut.din <= 1;
 
         ## Wait for the HOST to send ROM command and initiate writing sequence
-        await cocotb.triggers.Edge(dt.smtm)
-        await cocotb.triggers.Edge(dt.smtm)
+        for i in range(26):
+            await cocotb.triggers.Edge(dt.smtm)
 
         ## Write ROM string
         await self.ROM_like_expected()
