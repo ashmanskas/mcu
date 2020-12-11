@@ -246,11 +246,11 @@ module read_ds2411
 	     begin
 		if (count_sample_line == 0) begin
 		   if (din == GND) begin // Response is stored in read_rom
-		      read_rom[63 - count_store_ROM] <= 1'b0;
+		      read_rom[count_store_ROM] <= 1'b0;
 		      count_sample_line <= count_sample_line + 1;
 		      count_store_ROM <= count_store_ROM + 1;
 		   end else begin
-		      read_rom[63 - count_store_ROM] <= 1'b1;
+		      read_rom[count_store_ROM] <= 1'b1;
 		      count_sample_line <= count_sample_line + 1;
 		      count_store_ROM <= count_store_ROM + 1;
 		   end
