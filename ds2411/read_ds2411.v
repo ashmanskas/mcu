@@ -44,7 +44,7 @@ module read_ds2411
        tick_1MHz_d1 <= tick_1MHz;
    end
 
-// Declare wires and regs
+   // Declare wires and regs
    localparam
      TRANS_START = 630,              // 'transaction start' signal time
      TRANS_WAIT = 240,               // allowed response time after transaction start signal
@@ -72,7 +72,7 @@ module read_ds2411
    reg         din_enable;
    
 
-// Start state machine
+   // Start state machine
    localparam
      stm0=0, stm1=1, stm2=2, stm3=3,
      stm4=4, stm5=5, stm6=6, stm7=7,
@@ -233,7 +233,7 @@ module read_ds2411
 	   // State 10: Let line float
 	   stm10:
 	     begin
-		if (count_let_float == SHORT_DELAY + SHORT_DELAY) begin
+		if (count_let_float == 5) begin
 		   count_let_float <= 0;
 		   smtm <= stm11;
 		end else begin
@@ -254,7 +254,7 @@ module read_ds2411
 		      count_sample_line <= count_sample_line + 1;
 		      count_store_ROM <= count_store_ROM + 1;
 		   end
-		end else if (count_sample_line == DELAY + DELAY) begin
+		end else if (count_sample_line == DELAY + DELAY + SHORT_DELAY + SHORT_DELAY - 5) begin
 		   count_sample_line <= 0;
 		   smtm <= stm12;
 		end else begin
