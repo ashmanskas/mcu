@@ -57,16 +57,10 @@ module read_ds2411
    
    reg [63:0]  read_rom;           // register for storing readout (which comes least significant bit first)
 
-   reg [10:0]  count_trans_start;  // helper counter for starting transaction
-   reg [8:0]   count_start_response; // helper counter for waiting for response
    reg 	       response_caught;      // helper for catching responses
-   reg [3:0]   count_ROM_command_sequence;  // helper counter for sending READ ROM command
-   reg [6:0]   count_store_ROM;             // helper counter for storing ROM
-   reg [7:0]   count_ROM_cmd_bit;
-   reg [4:0]   count_chargeup_delay;
-   reg [4:0]   count_pull_low;
-   reg [5:0]   count_let_float;
-   reg [7:0]   count_sample_line;
+
+   reg [10:0]  count;
+   reg [7:0]   count_ROM;
 
    assign din = din_enable ? GND : 1'bz;
    reg         din_enable;
@@ -91,17 +85,10 @@ module read_ds2411
 	   stm0:		       
 	     begin
 		read_rom <= 0;
-		count_trans_start <= 0;
+		count <= 0;
+		count_ROM <= 0;
 		response_caught <= 1'b0;
-		count_ROM_command_sequence <= 0;
-		count_store_ROM <= 0;
 		din_enable <= 0;
-		count_start_response <= 0;
-		count_ROM_cmd_bit <= 0;
-		count_chargeup_delay <= 0;
-		count_pull_low <= 0;
-		count_let_float <= 0;
-		count_sample_line <= 0;
 		if (go) begin
 		   working <= 1;
 		   done <= 0;
@@ -115,11 +102,11 @@ module read_ds2411
 	   stm1:
 	     begin
 		din_enable = 1'b1;
-		if (count_trans_start == TRANS_START) begin
+		if (count == TRANS_START) begin
 		   smtm <= stm2;
-		   count_trans_start <= 0;
+		   count <= 0;
 		end else begin
-		   count_trans_start <= count_trans_start + 1;
+		   count <= count + 1;
 		   smtm <= stm1;
 		end		   
 	     end
@@ -132,13 +119,13 @@ module read_ds2411
 	   // State 3: Wait for response
 	   stm3:
 	     begin
-	        if (count_start_response == 240) begin
+	        if (count == 240) begin
 		   if (response_caught) begin
-		      count_start_response <= 0;
+		      count <= 0;
 		      response_caught <= 1'b0;
 		      smtm <= stm4;
 		   end else begin  // if no response end with:
-		      count_start_response <= 0;
+		      count <= 0;
 		      error <= 1; // error set to HIGH
 		      done <= 0;  // done set to LOW
 		      working <= 0;
@@ -148,19 +135,19 @@ module read_ds2411
 		   if (din == GND) begin
 		      response_caught <= 1'b1;
 		   end
-		   count_start_response = count_start_response + 1;
+		   count = count + 1;
 		   smtm <= stm3;
 		end
 	     end
 	   // State 4: Issue ROM command sequence (8-bit)
 	   stm4:
 	     begin
-		if (count_ROM_command_sequence == 8) begin
-		   count_ROM_command_sequence <= 0;
+		if (count_ROM == 8) begin
+		   count_ROM <= 0;
 		   smtm <= stm8;
 		end else begin // send bits from least significant to most significant
 		   din_enable <= 1'b1;
-		   if (READ_ROM_CMD[count_ROM_command_sequence] == 1'b0) begin
+		   if (READ_ROM_CMD[count_ROM] == 1'b0) begin
 		      smtm <= stm5;
 		   end else begin
 		      smtm <= stm6;
@@ -170,48 +157,48 @@ module read_ds2411
 	   // State 5: Send ZERO
 	   stm5:
 	     begin
-		if (count_ROM_cmd_bit == ZERO_TIME) begin
-		   count_ROM_cmd_bit <= 0;
-		   count_ROM_command_sequence = count_ROM_command_sequence + 1;
+		if (count == ZERO_TIME) begin
+		   count <= 0;
+		   count_ROM = count_ROM + 1;
 		   din_enable <= 1'b0;
 		   smtm <= stm7;
 		end else begin
-		   count_ROM_cmd_bit <= count_ROM_cmd_bit + 1;
+		   count <= count + 1;
 		   smtm <= stm5;
 		end
 	     end
 	   // State 6: Send ONE
 	   stm6:
 	     begin
-		if (count_ROM_cmd_bit == ZERO_TIME) begin
-		   count_ROM_cmd_bit <= 0;
-		   count_ROM_command_sequence = count_ROM_command_sequence + 1;
+		if (count == ZERO_TIME) begin
+		   count <= 0;
+		   count_ROM = count_ROM + 1;
 		   smtm <= stm7;
-		end else if (count_ROM_cmd_bit == ONE_TIME) begin
-		   count_ROM_cmd_bit <= count_ROM_cmd_bit + 1;
+		end else if (count == ONE_TIME) begin
+		   count <= count + 1;
 		   din_enable <= 1'b0;
 		   smtm <= stm6;
 		end else begin
-		   count_ROM_cmd_bit <= count_ROM_cmd_bit + 1;
+		   count <= count + 1;
 		   smtm <= stm6;
 		end
 	     end
 	   // State 7: Charge up delay for ROM command
 	   stm7:
 	     begin
-		if (count_chargeup_delay == SHORT_DELAY) begin
-		   count_chargeup_delay <= 0;
+		if (count == SHORT_DELAY) begin
+		   count <= 0;
 		   smtm <= stm4;
 		end else begin
-		   count_chargeup_delay <= count_chargeup_delay + 1;
+		   count <= count + 1;
 		   smtm <= stm7;
 		end
 	     end
 	   // State 8: Get response (serial code, 64-bit)
 	   stm8:
 	     begin
-		if (count_store_ROM == 64) begin
-		   count_store_ROM <= 0;
+		if (count_ROM == 64) begin
+		   count_ROM <= 0;
 		   smtm <= stm13;
 		end else begin
 		   din_enable = 1'b1;
@@ -221,55 +208,55 @@ module read_ds2411
 	   // State 9: Pull line low (Start READ)
 	   stm9:
 	     begin
-		if (count_pull_low == SHORT_DELAY) begin
-		   count_pull_low <= 0;
+		if (count == SHORT_DELAY) begin
+		   count <= 0;
 		   din_enable <= 1'b0;
 		   smtm <= stm10;
 		end else begin
-		   count_pull_low <= count_pull_low + 1;
+		   count <= count + 1;
 		   smtm <= stm9;
 		end
 	     end
 	   // State 10: Let line float
 	   stm10:
 	     begin
-		if (count_let_float == 5) begin
-		   count_let_float <= 0;
+		if (count == 5) begin
+		   count <= 0;
 		   smtm <= stm11;
 		end else begin
-		   count_let_float <=  count_let_float + 1;
+		   count <=  count + 1;
 		   smtm <= stm10;
 		end
 	     end
 	   // State 11: Sample line
 	   stm11:
 	     begin
-		if (count_sample_line == 0) begin
+		if (count == 0) begin
 		   if (din == GND) begin // Response is stored in read_rom
-		      read_rom[count_store_ROM] <= 1'b0;
-		      count_sample_line <= count_sample_line + 1;
-		      count_store_ROM <= count_store_ROM + 1;
+		      read_rom[count_ROM] <= 1'b0;
+		      count <= count + 1;
+		      count_ROM <= count_ROM + 1;
 		   end else begin
-		      read_rom[count_store_ROM] <= 1'b1;
-		      count_sample_line <= count_sample_line + 1;
-		      count_store_ROM <= count_store_ROM + 1;
+		      read_rom[count_ROM] <= 1'b1;
+		      count <= count + 1;
+		      count_ROM <= count_ROM + 1;
 		   end
-		end else if (count_sample_line == DELAY + DELAY + SHORT_DELAY + SHORT_DELAY - 5) begin
-		   count_sample_line <= 0;
+		end else if (count == DELAY + DELAY + SHORT_DELAY + SHORT_DELAY - 5) begin
+		   count <= 0;
 		   smtm <= stm12;
 		end else begin
-		   count_sample_line <= count_sample_line + 1;
+		   count <= count + 1;
 		   smtm <= stm11;
 		end
 	     end
 	   // State 12: Charge up delay
 	   stm12:
 	     begin
-		if (count_chargeup_delay == SHORT_DELAY) begin
-		   count_chargeup_delay <= 0;
+		if (count == SHORT_DELAY) begin
+		   count <= 0;
 		   smtm <= stm8;
 		end else begin
-		   count_chargeup_delay <= count_chargeup_delay + 1;
+		   count <= count + 1;
 		   smtm <= stm12;
 		end
 	     end

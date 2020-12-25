@@ -59,6 +59,7 @@ class Tester:
             await self.wclk(10)
 
     async def ROM_like_expected(self):
+        ## This test is sent the wrong way round
         ## Sample CRC byte
         for i in range (4):
             await self.send_zero()
