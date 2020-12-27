@@ -152,7 +152,7 @@ class Tester:
         dut.dtr.dynbl.currentvalue <= 0x100 * self.adcdat_quiescent
 
         # Number of samples to check
-        num_of_samples = 1000
+        num_of_samples = 10000
 
         # Instantiate arrays for plots
         actual_eventtime = list()
@@ -198,19 +198,9 @@ class Tester:
             # Send the pulse
             await self.send_pulse(sentPulse)
             await self.wclk(3)
-            #enesmo_d2 = int(str(dut.enesmo_d2), 2)
-            #enesmo_d3 = int(str(dut.enesmo_d3), 2)
             await self.wclk(100)
 
-            # Find out the clock tick the program says it noticed the pulse
-            #current_calculated_eventtime = int(str(dut.evnt_timsd_temp), 2)
-
-            # Interpreting event_time_out as it is meant to be read:
-            # Take the 12 least significant bits which represent the fractional part
-            #    and turn them into the corresponding int
-            actual_fraction.append((offset) / 1000)
-            sd_timfraco_str =  str(dut.sd_timfraco)
-            sd_timAdjusted_int = Tester.parse_bin(sd_timfraco_str) 
+            actual_fraction.append((offset) / 1000) 
 
             ## THIS IS IMPORTANT: PUT THIS IN VERILOG!!!!!!
             """if sd_timAdjusted_int <= 0.19:
