@@ -21,15 +21,8 @@ module dynode_eventdet
    output reg 	     dyn_event, //event detected
    output reg 	     dyn_pileup, //pileup up event detected
    output reg 	     dyn_pudump, //fd to wide
-   output reg [23:0] evntim,
-   output reg [7:0]  evnt_timsd_t, // temp output for scatter plot
-
-   output reg [13:0]     enesmo_d2,
-   output reg [13:0]     enesmo_d3,
-  
-   output reg [11:0] sd_timfraco
-  
-   );
+   output reg [23:0] evntim
+  );
    
    localparam
      selecttime      = 0,    	// 0 = time from SD, 1 = time from cfd enetot 4 point, 2 = 1 pt
@@ -39,25 +32,15 @@ module dynode_eventdet
      indetofflevel   = 14'b0000_0010_000000,    // indet turn off level
      fdonlevel       = 15'b0_0000_1000_000000,  // fd minimum for event
      sdonlevel	     = 15'b0_0000_0110_000000,  // sd minimum for event
-     pudetwide	     = 3'b100                   // evenr to close os dump both
-			  ;
+     pudetwide	     = 3'b100;                  // evenr to close os dump both
+			  
 
    // Delay  to smooth data for 100 mhz sample 
    // rate to remove dead spots do to rise time less then 10 ns.
-   reg [11:0] 	     dynblcor_d [9:0];
+   reg [11:0] dynblcor_d [1:0];
    always @ (posedge clk) begin
       dynblcor_d[0] <= dyn_blcor;
       dynblcor_d[1] <= dynblcor_d[0];
-      dynblcor_d[2] <= dynblcor_d[1];
-      dynblcor_d[3] <= dynblcor_d[2];
-      dynblcor_d[4] <= dynblcor_d[3];
-      dynblcor_d[5] <= dynblcor_d[4];
-      dynblcor_d[6] <= dynblcor_d[5];
-      dynblcor_d[7] <= dynblcor_d[6];
-      dynblcor_d[8] <= dynblcor_d[7];
-      dynblcor_d[9] <= dynblcor_d[8];
-      dynblcor_d[10] <= dynblcor_d[9];
-      dynblcor_d[11] <= dynblcor_d[10];
    end
 
    
@@ -94,10 +77,9 @@ module dynode_eventdet
    reg [2:0] 	pucnt;		// pileup count for pileup to close
    reg 		pudmp;		// dump pileup count for pileup to close
    reg [23:0] 	sd_evnttim;     // time of sd crossing with fraction
-   reg [23:0] 	sel_evnttim;    // time of sd or cfd crossing to output
 
    always @ (posedge clk) begin		 //gen fd and sd
-      enefd <= enesmo - enesmo_d[0];
+      enefd <= enesmo - enesmo_d;
       enefd_d <= enefd;
       enesd <= enefd - enefd_d;
       enesd_d <= enesd;
@@ -109,7 +91,6 @@ module dynode_eventdet
 	 enesd_n <= enesd;
 	 enesd_p <= enesd_d;
 	 evnt_timsd <= timcnt;
-	 evnt_timsd_t <= evnt_timsd;
        end      
    end
    
@@ -137,8 +118,6 @@ module dynode_eventdet
       if ((indet == 1'b1) & (fden == 1'b1) & (sden == 1'b1)) evnten = 1'b1;
       else if ((indet == 1'b1) & (smed == sed1)) evnten = evnten;	//wait for sd to go negative
       else evnten = 1'b0;
-      
-      sel_evnttim <= sd_evnttim;
       
    end
 
@@ -194,9 +173,7 @@ module dynode_eventdet
       dyn_indet <= indet;
       dyn_pileup <= piledet;		// pileup up event detected
       dyn_pudump <= pudmp;		// pileup up event to close
-      evntim <= sel_evnttim;
-      
-      sd_timfraco <= sd_timfrac[15:4];  // used for simulation in tb.py
+      evntim <= sd_evnttim;
 
    end
    
@@ -256,29 +233,9 @@ module dynode_eventdet
    
    
    // Delay for timming test  
-   reg [13:0] enesmo_d [15:0];
+   reg [13:0] enesmo_d;
    always @ (posedge clk) begin
-      enesmo_d[0] <= enesmo;
-      enesmo_d[1] <= enesmo_d[0];
-      enesmo_d[2] <= enesmo_d[1];
-      enesmo_d[3] <= enesmo_d[2];
-      enesmo_d[4] <= enesmo_d[3];
-      enesmo_d[5] <= enesmo_d[4];
-      enesmo_d[6] <= enesmo_d[5];
-      enesmo_d[7] <= enesmo_d[6];
-      enesmo_d[8] <= enesmo_d[7];
-      enesmo_d[9] <= enesmo_d[8];
-      enesmo_d[10] <= enesmo_d[9];
-      enesmo_d[11] <= enesmo_d[10];
-      enesmo_d[12] <= enesmo_d[11];
-      enesmo_d[13] <= enesmo_d[12];
-      enesmo_d[14] <= enesmo_d[13];
-      enesmo_d[15] <= enesmo_d[14];
-      
-      if (dynblcor_d[9] == 12'b000000000000) begin
-	 enesmo_d3 <= {2'b00, dynblcor_d[4]};
-	 enesmo_d2 <= {2'b00, dynblcor_d[3]};
-      end
+      enesmo_d <= enesmo;
    end
       
 endmodule
