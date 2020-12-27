@@ -35,8 +35,6 @@ module tb;
 
     reg [7:0] timcnt=0;
     reg [3:0] dynadcdly=0;
-    reg [1:0] selecttime=0;
-    reg [3:0] smoothpmt=0;
     reg [11:0] integcntl=0;
 
     wire [7:0] adc_delay;
@@ -53,14 +51,8 @@ module tb;
     wire trigger_data_fifo_ne;
     wire trigger_data_fifo_full;
 
-   reg [7:0] evnt_timsd_temp;
-   reg [11:0] sd_timfraco;
-
    reg [11:0] event_whole_num;
-   reg [11:0] event_frac;
-
-   reg [13:0] enesmo_d2;
-   reg [13:0] enesmo_d3;   
+   reg [11:0] event_frac;  
    
 
     always @ (posedge clk) timcnt <= timcnt + 1;
@@ -77,8 +69,6 @@ module tb;
        .dyn_enecor(dyn_enecor),
        .timcnt(timcnt),
        .dynadcdly(dynadcdly),
-       .selecttime(selecttime),
-       .smoothpmt(smoothpmt),
        .integcntl(integcntl),
        .adc_delay(adc_delay),
        .sum_integ(sum_integ),
@@ -91,12 +81,8 @@ module tb;
        .trigger_data_fifo_q(trigger_data_fifo_q),
        .trigger_data_fifo_ne(trigger_data_fifo_ne),
        .trigger_data_fifo_full(trigger_data_fifo_full),
-       .evnt_timsd_temp(evnt_timsd_temp),
-       .sd_timfraco(sd_timfraco),
        .event_whole_num(event_whole_num),
-       .event_frac(event_frac),
-       .enesmo_d2(enesmo_d2),
-       .enesmo_d3(enesmo_d3));
+       .event_frac(event_frac));
 
     dynode_trigger dt
       (.clk(clk), .reset(reset), .ibus(ibus), .obus(obus),

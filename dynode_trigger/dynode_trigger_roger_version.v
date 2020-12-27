@@ -25,8 +25,6 @@
 
 module dynode_trigger_roger
   (
-   output reg [7:0]   evnt_timsd_temp, // temp register for scatter plot
-   output reg [11:0]  sd_timfraco,
   
    // dynode trigger I/O
    input wire 	      clk,
@@ -45,9 +43,7 @@ module dynode_trigger_roger
    // control inputs set by register if not in simulation
    input wire [7:0]   timcnt, //time counter   
    input wire [3:0]   dynadcdly, // sets number of clk cyc delays to integrations and bsleline 
-   input wire [1:0]   selecttime, // 0 = time from SD, 1 = time from cfd enetot 4 point, 2 = 1 pt
-   input wire [3:0]   smoothpmt, // set number of points in smooth 1, 2, 3, or 4 
-   //  input wire [3:0] integcount,			// number of samples in a ful integration 
+   
    input wire [11:0]  integcntl, // Controls filter on sample count and phase of events passed
   
    // outputs for simulatton test
@@ -67,10 +63,7 @@ module dynode_trigger_roger
    output wire 	      trigger_data_fifo_full,
 
    output reg [11:0] event_whole_num,
-   output reg [11:0] event_frac,
-
-   output reg [13:0] enesmo_d2,
-   output reg [13:0] enesmo_d3
+   output reg [11:0] event_frac
 
    );
    
@@ -96,43 +89,43 @@ module dynode_trigger_roger
    end
 
    // connection signals
-   wire 		dyn_indet_sig;		//event may be present
-   wire 		dyn_event_sig;		//event detected
-   wire 		dyn_pileup_sig;		//pileup up event detected
-   reg [7:0] 		dyn_data_in_sig;		//dynode ADC data
-   wire [11:0] 		dyn_blcor_sig;		//baseline corrected ADC for event detection 
-   wire [7:0] 		dyn_adcdly_sig;		//delayed ADC data for energy integration 
-   wire [15:0] 		dyn_curval_sig	;	//baseline for energy integration baseline correction 
-   wire [23:0] 		evntim_sig	;			//event time from eventdet 
-   wire 		dyn_pudump_sig ;	// indicates event was dumped because it was two
-   wire [11:0] 		dyn_energy_sig ;	// dynode integrated energy uncorrected
-   wire [3:0] 		dyn_ingcnt_sig ;		// number of samples in the integrated value
-   wire 		ene_load_sig ;	// output  dyn_ene_load_sig
-   wire [23:0] 		dyn_evntim_sig ; 	// event start time of integrated event
-   wire 		enecor_load_sig ;	// output  dyn_ene_load_sig
-   wire [7:0] 		dynadc_dly_sig;		//delayed ADC data from energy integration 
+   wire 		dyn_indet_sig;	 // event may be present
+   wire 		dyn_event_sig;	 // event detected
+   wire 		dyn_pileup_sig;  // pileup up event detected
+   reg [7:0] 		dyn_data_in_sig; // dynode ADC data
+   wire [11:0] 		dyn_blcor_sig;   // baseline corrected ADC for event detection 
+   wire [7:0] 		dyn_adcdly_sig;	 // delayed ADC data for energy integration 
+   wire [15:0] 		dyn_curval_sig;	 // baseline for energy integration baseline correction 
+   wire [23:0] 		evntim_sig;	 // event time from eventdet 
+   wire 		dyn_pudump_sig;	 // indicates event was dumped because it was two
+   wire [11:0] 		dyn_energy_sig;	 // dynode integrated energy uncorrected
+   wire [3:0] 		dyn_ingcnt_sig;	 // number of samples in the integrated value
+   wire 		ene_load_sig;	 // output  dyn_ene_load_sig
+   wire [23:0] 		dyn_evntim_sig;  // event start time of integrated event
+   wire 		enecor_load_sig; // output  dyn_ene_load_sig
+   wire [7:0] 		dynadc_dly_sig;	 // delayed ADC data from energy integration 
 
-   assign enecor_load = enecor_load_sig ;
-   assign event_trigger_out = dyn_event_sig ;
-   assign event_time_out = evntim_sig ;
+   assign enecor_load = enecor_load_sig;
+   assign event_trigger_out = dyn_event_sig;
+   assign event_time_out = evntim_sig;
    
    dynode_baseline dynbl
      (
-      .clk(clk) ,	// input  clk_sig
-      .reset(reset) ,	// input  reset_sig
-      .dyn_indet(dyn_indet_sig) ,	// input  dyn_indet_sig
-      .dyn_event(dyn_event_sig) ,	// input  dyn_event_sig
-      .dyn_pileup(dyn_pileup_sig) ,	// input  dyn_pileup_sig
-      .dyn_pudump(dyn_pudump_sig) ,	// input  dyn_pudump_sig
-      .dyn_data_in(data_in) ,			// input [7:0] dyn_data_in_sig
-      .dynadcdly(dynadcdly) ,				// input [3:0] sets number of clk cyc delays to integrations and bsleline 
-      .dyn_blcor(dyn_blcor_sig) ,	// output [11:0] dyn_blcor_sig
-      .dyn_adcdly(dyn_adcdly_sig) ,	// output [7:0] dyn_adcdly_sig
+      .clk(clk),	// input  clk_sig
+      .reset(reset),	// input  reset_sig
+      .dyn_indet(dyn_indet_sig),	// input  dyn_indet_sig
+      .dyn_event(dyn_event_sig),	// input  dyn_event_sig
+      .dyn_pileup(dyn_pileup_sig),	// input  dyn_pileup_sig
+      .dyn_pudump(dyn_pudump_sig),	// input  dyn_pudump_sig
+      .dyn_data_in(data_in),			// input [7:0] dyn_data_in_sig
+      .dynadcdly(dynadcdly),				// input [3:0] sets number of clk cyc delays to integrations and bsleline 
+      .dyn_blcor(dyn_blcor_sig),	// output [11:0] dyn_blcor_sig
+      .dyn_adcdly(dyn_adcdly_sig),	// output [7:0] dyn_adcdly_sig
       .dyn_curval(dyn_curval_sig) 	// output [15:0] dyn_curval_sig
-      );
+     );
 
    // delay baseline corrected adc 
-   reg [11:0] 		blcor_dly [15:0];
+   reg [11:0] blcor_dly [15:0];
    always @ (posedge clk) begin
       blcor_dly[0] <= dyn_blcor_sig;
       blcor_dly[1] <= blcor_dly[0];
@@ -153,29 +146,23 @@ module dynode_trigger_roger
 
    dynode_eventdet dyned
      (
-      .clk(clk) ,	// input  clk_sig
-      .reset(reset) ,	// input  reset_sig
-      .timcnt(timcnt) ,	// input [7:0] timcnt_sig
-      .dyn_blcor(dyn_blcor_sig) ,	// input [11:0] dyn_blcor_sig
-      .selecttime(selecttime) ,	// input [1:0] selecttime_sig
-      .smoothpmt(smoothpmt) ,	// input [3:0] smoothpmt_sig
-      .dyn_indet(dyn_indet_sig) ,	// output  dyn_indet_sig
-      .dyn_event(dyn_event_sig) ,	// output  dyn_event_sig
-      .dyn_pileup(dyn_pileup_sig) ,	// output  dyn_pileup_sig
-      .dyn_pudump(dyn_pudump_sig) ,	// output  dyn_pudump_sig
-      .evntim(evntim_sig), 	// output [23:0] evntim_sig
-      .evnt_timsd_t(evnt_timsd_temp), // temp output for scatter plot
-      .sd_timfraco(sd_timfraco),
-      .enesmo_d2(enesmo_d2),
-      .enesmo_d3(enesmo_d3)
-      );
+      .clk(clk),	// input  clk_sig
+      .reset(reset),	// input  reset_sig
+      .timcnt(timcnt),	// input [7:0] timcnt_sig
+      .dyn_blcor(dyn_blcor_sig),	// input [11:0] dyn_blcor_sig
+      .dyn_indet(dyn_indet_sig),	// output  dyn_indet_sig
+      .dyn_event(dyn_event_sig),	// output  dyn_event_sig
+      .dyn_pileup(dyn_pileup_sig),	// output  dyn_pileup_sig
+      .dyn_pudump(dyn_pudump_sig),	// output  dyn_pudump_sig
+      .evntim(evntim_sig) 	// output [23:0] evntim_sig
+     );
 
 
    always @ (posedge clk) begin		 //send coin trigger time
-      if (dyn_event_sig == 1'b0 ) MCU_trigger_out <= 8'b11111111 ;
-      else if (dyn_event_sig == 1'b1 )begin
-	 if  (evntim_sig[11:6] == 6'b111111 == evntim_sig[11:6]) MCU_trigger_out <= 8'hF8 ;
-	 else MCU_trigger_out <= evntim_sig[11:4] ; end
+      if (dyn_event_sig == 1'b0) MCU_trigger_out <= 8'b11111111;
+      else if (dyn_event_sig == 1'b1) begin
+	 if  (evntim_sig[11:6] == 6'b111111 == evntim_sig[11:6]) MCU_trigger_out <= 8'hF8;
+	 else MCU_trigger_out <= evntim_sig[11:4]; end
       
       event_whole_num <= {4'b0000, evntim_sig[19:12]};
       event_frac <= evntim_sig[11:0];
@@ -183,37 +170,37 @@ module dynode_trigger_roger
 
    dynode_integrate dynintg
      (
-      .clk(clk) ,	// input  clk_sig
-      .reset(reset) ,	// input  reset_sig
-      .integcount(integration_pipeline_len) ,	// input [3:0] integcount_sig
-      .dyn_adcdly(dyn_adcdly_sig) ,	// input [7:0] dyn_adcdly_sig
-      .dyn_curval(dyn_curval_sig) ,	// input [15:0] dyn_curval_sig
-      .dyn_event(dyn_event_sig) ,	// input  dyn_event_sig
-      .evntim(evntim_sig) ,	// input [23:0] evntim_sig
-      .dyn_energy(dyn_energy_sig) ,	// output [11:0] dyn_energy_sig
-      .dyn_ingcnt(dyn_ingcnt_sig) ,	// output [3:0] dyn_ingcnt_sig
-      .ene_load(ene_load_sig) ,	// output  dyn_ene_load_sig
+      .clk(clk),	// input  clk_sig
+      .reset(reset),	// input  reset_sig
+      .integcount(integration_pipeline_len),	// input [3:0] integcount_sig
+      .dyn_adcdly(dyn_adcdly_sig),	// input [7:0] dyn_adcdly_sig
+      .dyn_curval(dyn_curval_sig),	// input [15:0] dyn_curval_sig
+      .dyn_event(dyn_event_sig),	// input  dyn_event_sig
+      .evntim(evntim_sig),	// input [23:0] evntim_sig
+      .dyn_energy(dyn_energy_sig),	// output [11:0] dyn_energy_sig
+      .dyn_ingcnt(dyn_ingcnt_sig),	// output [3:0] dyn_ingcnt_sig
+      .ene_load(ene_load_sig),	// output  dyn_ene_load_sig
       .dyn_evntim(dyn_evntim_sig), 	// output [23:0] dyn_evntim_sig
       .adc_delay(adc_delay), 	// output [7:0] delayse adc
       .sum_integ(sum_integ), 	// output [11:0] integ sum
       .dynadc_dly(dynadc_dly_sig) 	// output [7:0] dynadc_dly_sig
-      );
+     );
 
    dynode_pileup dynpiup
      (
-      .clk(clk) ,	// input  clk_sig
-      .reset(reset) ,	// input  reset_sig
-      .integcount(integration_pipeline_len) ,	// input [3:0] integcount_sig
-      .dyn_ingcnt(dyn_ingcnt_sig) ,	// input [3:0] dyn_ingcnt_sig
-      .dyn_energy(dyn_energy_sig) ,	// input [11:0] dyn_energy_sig
-      .ene_load(ene_load_sig) ,	// input  ene_load_sig
-      .evntim(dyn_evntim_sig) ,	// input [23:0] evntim_sig
-      .integcntl(integcntl) ,	// input [11:0] integcntl_sig
-      .dyn_enecor(dyn_enecor) ,	// output [11:0] dyn_enecor_sig
-      .enecor_load(enecor_load_sig ) ,	// output  enecor_load_sig
-      .dyn_evntim(dyn_evntim) ,	// output [23:0] dyn_evntim_sig
+      .clk(clk),	// input  clk_sig
+      .reset(reset),	// input  reset_sig
+      .integcount(integration_pipeline_len),	// input [3:0] integcount_sig
+      .dyn_ingcnt(dyn_ingcnt_sig),	// input [3:0] dyn_ingcnt_sig
+      .dyn_energy(dyn_energy_sig),	// input [11:0] dyn_energy_sig
+      .ene_load(ene_load_sig),	// input  ene_load_sig
+      .evntim(dyn_evntim_sig),	// input [23:0] evntim_sig
+      .integcntl(integcntl),	// input [11:0] integcntl_sig
+      .dyn_enecor(dyn_enecor),	// output [11:0] dyn_enecor_sig
+      .enecor_load(enecor_load_sig ),	// output  enecor_load_sig
+      .dyn_evntim(dyn_evntim),	// output [23:0] dyn_evntim_sig
       .pulookup(pulookup) 	// output [7:0] pulookup_sig
-      );
+     );
 
    // load fifo with energy or ADC raw or ADC baseline corrected.
    
@@ -254,14 +241,14 @@ module dynode_trigger_roger
    end
    
    reg [15:0] dynode_energy;
-   reg 	      trigger_fifo_load ;
+   reg 	      trigger_fifo_load;
 
    always @ (posedge clk) begin
-      if  ( enecor_load_sig == 1'b1)begin
-	 dynode_energy <= {4'b0000, dyn_enecor } ;
-	 trigger_fifo_load <= enecor_load_sig ;
+      if  (enecor_load_sig == 1'b1) begin
+	 dynode_energy <= {4'b0000, dyn_enecor};
+	 trigger_fifo_load <= enecor_load_sig;
       end
-      else trigger_fifo_load <= trigger ;
+      else trigger_fifo_load <= trigger;
    end
    
    // trigger data fifo
