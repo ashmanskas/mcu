@@ -157,8 +157,6 @@ module dynode_trigger_roger
       .reset(reset) ,	// input  reset_sig
       .timcnt(timcnt) ,	// input [7:0] timcnt_sig
       .dyn_blcor(dyn_blcor_sig) ,	// input [11:0] dyn_blcor_sig
-      .selecttime(selecttime) ,	// input [1:0] selecttime_sig
-      .smoothpmt(smoothpmt) ,	// input [3:0] smoothpmt_sig
       .dyn_indet(dyn_indet_sig) ,	// output  dyn_indet_sig
       .dyn_event(dyn_event_sig) ,	// output  dyn_event_sig
       .dyn_pileup(dyn_pileup_sig) ,	// output  dyn_pileup_sig

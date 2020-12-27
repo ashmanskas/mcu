@@ -35,8 +35,6 @@ module tb;
 
     reg [7:0] timcnt=0;
     reg [3:0] dynadcdly=0;
-    reg [1:0] selecttime=0;
-    reg [3:0] smoothpmt=0;
     reg [11:0] integcntl=0;
 
     wire [7:0] adc_delay;
@@ -77,8 +75,6 @@ module tb;
        .dyn_enecor(dyn_enecor),
        .timcnt(timcnt),
        .dynadcdly(dynadcdly),
-       .selecttime(selecttime),
-       .smoothpmt(smoothpmt),
        .integcntl(integcntl),
        .adc_delay(adc_delay),
        .sum_integ(sum_integ),
