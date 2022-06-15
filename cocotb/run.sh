@@ -4,5 +4,5 @@ fi
 export COCOTB_REDUCED_LOG_FMT=1
 export PYTHONDONTWRITEBYTECODE=1
 export IVERILOG_DUMPER=lxt2
-export PYTHON_BIN=$(which python3)
+export PYTHON_BIN=$(which apython3)
 make
